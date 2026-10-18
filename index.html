@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GoldNexus Admin</title>
+    <style>
+        body { background: #050805; color: #fff; font-family: sans-serif; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; background: #111811; padding: 20px; border-radius: 12px; border: 1px solid #1a251a; }
+        h1 { color: #ffd700; margin-bottom: 20px; }
+        h2 { color: #00ff88; margin: 20px 0 10px; }
+        input, button, select { padding: 10px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #1a251a; background: #0a0e0a; color: #fff; }
+        button { background: #00ff88; color: #000; font-weight: bold; cursor: pointer; border: none; }
+        button:hover { background: #00cc6a; }
+        button.danger { background: #ff4444; color: #fff; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #1a251a; }
+        th { color: #889988; }
+        .tab { display: none; }
+        .tab.active { display: block; }
+        .tabs button { background: #1a251a; color: #fff; margin-right: 5px; }
+        .tabs button.active { background: #00ff88; color: #000; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚙️ GoldNexus Admin Panel</h1>
+        
+        <div id="login-section">
+            <input type="password" id="admin-password" placeholder="Contraseña de administrador">
+            <button onclick="login()">Entrar</button>
+        </div>
+
+        <div id="admin-panel" style="display: none;">
+            <div class="tabs">
+                <button class="active" onclick="showTab('tasks')">Tareas</button>
+                <button onclick="showTab('users')">Usuarios</button>
+                <button onclick="showTab('withdrawals')">Retiros</button>
+            </div>
+
+            <div id="tab-tasks" class="tab active">
+                <h2>Agregar Tarea</h2>
+                <input type="text" id="task-title" placeholder="Nombre de la tarea">
+                <input type="text" id="task-link" placeholder="Enlace (https://t.me/... o https://t.me/Bot?start=...)">
+                <input type="number" id="task-reward" placeholder="Recompensa USDT" step="0.01" value="1.00">
+                <button onclick="addTask()">➕ Agregar Tarea</button>
+                <h2>Tareas Activas</h2>
+                <div id="tasks-list"></div>
+            </div>
+
+            <div id="tab-users" class="tab">
+                <h2>Usuarios</h2>
+                <div id="users-list"></div>
+            </div>
+
+            <div id="tab-withdrawals" class="tab">
+                <h2>Solicitudes de Retiro</h2>
+                <div id="withdrawals-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let adminPassword = '';
+
+        function login() {
+            adminPassword = document.getElementById('admin-password').value;
+            fetch('/api/admin/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: adminPassword })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('login-section').style.display = 'none';
+                    document.getElementById('admin-panel').style.display = 'block';
+                    loadTasks();
+                    loadUsers();
+                    loadWithdrawals();
+                } else {
+                    alert('Contraseña incorrecta');
+                }
+            });
+        }
+
+        function showTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+            document.getElementById('tab-' + tab).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function loadTasks() {
+            fetch('/api/admin/tasks')
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('tasks-list').innerHTML = data.map(task => `
+                        <div style="display: flex; justify-content: space-between; padding: 10px; background: #0a0e0a; border-radius: 8px; margin-bottom: 5px;">
+                            <span>${task.title} - ${task.reward} USDT</span>
+                            <button class="danger" onclick="deleteTask(${task.id})">🗑️</button>
+                        </div>
+                    `).join('');
+                });
+        }
+
+        function addTask() {
+            const title = document.getElementById('task-title').value;
+            const link = document.getElementById('task-link').value;
+            const reward = document.getElementById('task-reward').value;
+            fetch('/api/admin/tasks', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title, link, reward })
+            }).then(() => {
+                loadTasks();
+                document.getElementById('task-title').value = '';
+                document.getElementById('task-link').value = '';
+            });
+        }
+
+        function deleteTask(id) {
+            fetch(`/api/admin/tasks/${id}`, { method: 'DELETE' }).then(() => loadTasks());
+        }
+
+        function loadUsers() {
+            fetch('/api/admin/users')
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('users-list').innerHTML = `
+                        <table>
+                            <tr><th>ID</th><th>Usuario</th><th>Saldo</th><th>Refs</th><th>Estado</th><th>Acción</th></tr>
+                            ${data.map(u => `
+                                <tr>
+                                    <td>${u.id}</td>
+                                    <td>${u.username}</td>
+                                    <td>${u.balance.toFixed(2)}</td>
+                                    <td>${u.referidos}</td>
+                                    <td>${u.banned ? '🚫 Baneado' : '✅ Activo'}</td>
+                                    <td>
+                                        <button onclick="toggleBan(${u.id}, ${u.banned})">${u.banned ? 'Desbanear' : 'Banear'}</button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </table>
+                    `;
+                });
+        }
+
+        function toggleBan(userId, banned) {
+            fetch(`/api/admin/ban/${userId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ banned: banned ? 0 : 1 })
+            }).then(() => loadUsers());
+        }
+
+        function loadWithdrawals() {
+            fetch('/api/admin/withdrawals')
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('withdrawals-list').innerHTML = `
+                        <table>
+                            <tr><th>Usuario</th><th>Monto</th><th>Wallet</th><th>Estado</th><th>Acción</th></tr>
+                            ${data.map(w => `
+                                <tr>
+                                    <td>${w.username}</td>
+                                    <td>${w.amount} USDT</td>
+                                    <td>${w.wallet}</td>
+                                    <td>${w.status}</td>
+                                    <td>
+                                        ${w.status === 'pending' ? `
+                                            <button onclick="approveWithdrawal(${w.id})">✅ Aprobar</button>
+                                            <button class="danger" onclick="rejectWithdrawal(${w.id})">❌ Rechazar</button>
+                                        ` : '—'}
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </table>
+                    `;
+                });
+        }
+
+        function approveWithdrawal(id) {
+            fetch(`/api/admin/withdrawals/${id}/approve`, { method: 'POST' }).then(() => loadWithdrawals());
+        }
+
+        function rejectWithdrawal(id) {
+            fetch(`/api/admin/withdrawals/${id}/reject`, { method: 'POST' }).then(() => loadWithdrawals());
+        }
+    </script>
+</body>
+  </html>
