@@ -1,5 +1,5 @@
 :root {
-    --bg-color: #050805;
+    --bg-color: #000000;
     --card-bg: rgba(17, 24, 17, 0.85);
     --accent-green: #00ff88;
     --gold: #ffd700;
@@ -10,14 +10,10 @@
 * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
 
 body {
-    background-image: url('https://i.ibb.co/6JgpmPN9/Imagen-generada-con-Canva-IA-17-oct-2026-8-41-42-p-m.jpg');
-    background-size: cover;
-    background-position: center;
-    background-attachment: fixed;
     background-color: var(--bg-color);
     color: var(--text-main);
     padding: 16px; 
-    padding-bottom: 90px; /* Espacio para la barra inferior */
+    padding-bottom: 90px;
     display: flex; justify-content: center;
     min-height: 100vh; overflow-x: hidden;
 }
@@ -27,12 +23,12 @@ body {
 /* INTRO */
 .intro-screen {
     position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    background: radial-gradient(circle at 50% 50%, rgba(15, 26, 15, 0.95) 0%, rgba(5, 8, 5, 0.98) 100%);
+    background: radial-gradient(circle at 50% 50%, rgba(15, 26, 15, 0.95) 0%, #000000 100%);
     display: flex; flex-direction: column; justify-content: center; align-items: center;
     z-index: 1000; animation: fadeIn 0.8s ease;
 }
 .intro-logo-container { position: relative; width: 120px; height: 120px; display: flex; justify-content: center; align-items: center; }
-.intro-logo { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid var(--gold); z-index: 2; animation: logoPulse 2s ease-in-out infinite; }
+.intro-logo { width: 120px; height: 120px; border-radius: 50%; object-fit: cover; border: 3px solid var(--gold); z-index: 2; animation: logoPulse 2s ease-in-out infinite; box-shadow: 0 0 20px rgba(255, 215, 0, 0.5); }
 .intro-logo-glow {
     position: absolute; width: 150px; height: 150px; border-radius: 50%;
     background: conic-gradient(from 0deg, transparent, var(--gold), transparent, var(--accent-green), transparent);
@@ -62,7 +58,7 @@ body {
 header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
 .logo-container { display: flex; align-items: center; gap: 12px; }
 .logo-wrapper { position: relative; width: 50px; height: 50px; display: flex; justify-content: center; align-items: center; }
-.logo { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold); z-index: 2; }
+.logo { width: 50px; height: 50px; border-radius: 50%; object-fit: cover; border: 2px solid var(--gold); z-index: 2; box-shadow: 0 0 10px rgba(255, 215, 0, 0.5); }
 .logo-glow { position: absolute; width: 60px; height: 60px; border-radius: 50%; background: conic-gradient(from 0deg, transparent, var(--gold), transparent); animation: rotateGlow 3s linear infinite; z-index: 1; filter: blur(8px); }
 .glow-text { font-size: 16px; letter-spacing: 1px; text-shadow: 0 0 10px rgba(0, 255, 136, 0.4); }
 .subtitle { font-size: 10px; color: var(--text-muted); letter-spacing: 1px; }
@@ -81,7 +77,6 @@ header { display: flex; justify-content: space-between; align-items: center; mar
 .currency { font-size: 16px; color: var(--accent-green); }
 
 .coin-img { width: 40px; height: 40px; object-fit: contain; animation: coinFloat 3s ease-in-out infinite; filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.6)); }
-.floating-img { width: 100%; max-width: 180px; margin: 10px auto; display: block; animation: floatUpDown 4s ease-in-out infinite; filter: drop-shadow(0 0 20px rgba(0, 255, 136, 0.4)); }
 
 .action-buttons { display: flex; gap: 12px; margin-top: 20px; }
 .btn-primary { flex: 1; padding: 14px; border-radius: 14px; border: none; background: linear-gradient(135deg, var(--accent-green), #00cc6a); color: #000; font-weight: bold; cursor: pointer; transition: all 0.3s; }
@@ -96,7 +91,7 @@ header { display: flex; justify-content: space-between; align-items: center; mar
 /* TAREAS */
 .tasks-section { margin-top: 20px; }
 .task-card { background: var(--card-bg); border-radius: 16px; padding: 16px; display: flex; align-items: center; gap: 14px; margin-top: 12px; border: 1px solid rgba(255, 255, 255, 0.05); }
-.task-icon-img { width: 40px; height: 40px; object-fit: contain; animation: floatUpDown 3s ease-in-out infinite; }
+.task-icon-img { width: 40px; height: 40px; object-fit: contain; animation: floatUpDown 3s ease-in-out infinite; filter: drop-shadow(0 0 8px rgba(0, 255, 136, 0.3)); }
 .task-info { flex: 1; }
 .task-info h3 { font-size: 14px; }
 .reward { color: var(--accent-green); font-size: 13px; font-weight: bold; }
@@ -112,13 +107,112 @@ header { display: flex; justify-content: space-between; align-items: center; mar
     padding: 10px 0 15px 0; z-index: 999;
     box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.5);
 }
-.nav-item { background: none; border: none; display: flex; flex-direction: column; align-items: center; color: #889988; cursor: pointer; transition: all 0.3s ease; width: 25%; }
+.nav-item { background: none; border: none; display: flex; flex-direction: column; align-items: center; color: #889988; cursor: pointer; transition: all 0.3s ease; width: 20%; }
 .nav-icon { font-size: 22px; margin-bottom: 4px; filter: grayscale(100%); opacity: 0.7; transition: all 0.3s; }
 .nav-text { font-size: 10px; font-weight: bold; letter-spacing: 0.5px; }
 .nav-item.active { color: var(--accent-green); }
 .nav-item.active .nav-icon { filter: grayscale(0%); opacity: 1; transform: translateY(-3px) scale(1.1); text-shadow: 0 0 10px rgba(0, 255, 136, 0.5); }
 .nav-item.active .nav-text { text-shadow: 0 0 10px rgba(0, 255, 136, 0.3); }
 
-/* ANIMACIONES */
+/* NOTIFICACIONES BONITAS (TOASTS) */
+.toast-container {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 90%;
+    max-width: 350px;
+    pointer-events: none;
+}
+.toast {
+    background: rgba(17, 24, 17, 0.95);
+    backdrop-filter: blur(10px);
+    border: 1px solid #00ff88;
+    border-left: 4px solid #00ff88;
+    color: #fff;
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-size: 13px;
+    box-shadow: 0 4px 15px rgba(0, 255, 136, 0.2);
+    animation: slideInToast 0.3s ease forwards;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.toast.error {
+    border-color: #ff4444;
+    border-left-color: #ff4444;
+    box-shadow: 0 4px 15px rgba(255, 68, 68, 0.2);
+}
+@keyframes slideInToast {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- SECCIÓN DE REFERIDOS --- */
+.ref-header { text-align: center; margin-bottom: 15px; }
+.ref-image-container { text-align: center; margin-bottom: 15px; }
+.ref-img { width: 100%; max-width: 180px; animation: floatUpDown 4s ease-in-out infinite; filter: drop-shadow(0 0 20px rgba(0, 255, 136, 0.3)); }
+.ref-pill { 
+    background: rgba(0, 255, 136, 0.1); 
+    border: 1px solid rgba(0, 255, 136, 0.3); 
+    padding: 8px 15px; 
+    border-radius: 20px; 
+    text-align: center; 
+    font-size: 13px; 
+    font-weight: bold; 
+    margin-bottom: 15px; 
+    width: fit-content; 
+    margin-left: auto; 
+    margin-right: auto;
+}
+.ref-link-box {
+    background: #0a0e0a;
+    border: 1px solid #1a251a;
+    padding: 12px;
+    border-radius: 10px;
+    margin-bottom: 15px;
+}
+.ref-actions { display: flex; gap: 8px; margin-bottom: 20px; }
+.btn-share {
+    flex: 1; background: linear-gradient(135deg, #00ff88, #00cc6a);
+    color: #000; border: none; padding: 12px; border-radius: 10px;
+    font-weight: bold; font-size: 14px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+    box-shadow: 0 4px 15px rgba(0, 255, 136, 0.3);
+}
+.btn-icon {
+    background: rgba(255, 255, 255, 0.05); border: 1px solid #1a251a;
+    color: #fff; padding: 0 15px; border-radius: 10px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+}
+.ref-stats { display: flex; gap: 10px; }
+.stat-box {
+    flex: 1; background: #0a0e0a; border: 1px solid #1a251a;
+    border-radius: 12px; padding: 12px; display: flex; align-items: center; gap: 10px;
+}
+.stat-icon { font-size: 24px; background: rgba(0, 255, 136, 0.1); padding: 8px; border-radius: 50%; }
+
+/* --- SECCIÓN DE RETIRO --- */
+.network-box {
+    background: #0a0e0a; border: 1px solid #00ff88; border-radius: 12px;
+    padding: 12px; display: flex; justify-content: space-between; align-items: center;
+    box-shadow: 0 0 10px rgba(0, 255, 136, 0.1);
+}
+.wallet-input {
+    width: 100%; background: #0a0e0a; border: 1px solid #1a251a;
+    padding: 14px; border-radius: 10px; color: #fff; font-size: 14px;
+    margin-bottom: 15px; outline: none; transition: border 0.3s;
+}
+.wallet-input:focus { border-color: #00ff88; }
+.withdraw-details { background: #0a0e0a; border: 1px solid #1a251a; border-radius: 12px; padding: 15px; margin-bottom: 20px; }
+.detail-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 8px; color: #889988; }
+.detail-row span:last-child { color: #fff; }
+
+/* ANIMACIONES GENERALES */
 @keyframes coinFloat { 0%, 100% { transform: translateY(0) rotateY(0deg); } 50% { transform: translateY(-8px) rotateY(180deg); } }
 @keyframes floatUpDown { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
