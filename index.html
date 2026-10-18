@@ -2,127 +2,192 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GoldNexus</title>
-    <link rel="stylesheet" href="style.css">
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GoldNexus Admin</title>
+    <style>
+        body { background: #050805; color: #fff; font-family: sans-serif; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; background: #111811; padding: 20px; border-radius: 12px; border: 1px solid #1a251a; }
+        h1 { color: #ffd700; margin-bottom: 20px; }
+        h2 { color: #00ff88; margin: 20px 0 10px; }
+        input, button, select { padding: 10px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #1a251a; background: #0a0e0a; color: #fff; }
+        button { background: #00ff88; color: #000; font-weight: bold; cursor: pointer; border: none; }
+        button:hover { background: #00cc6a; }
+        button.danger { background: #ff4444; color: #fff; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #1a251a; }
+        th { color: #889988; }
+        .tab { display: none; }
+        .tab.active { display: block; }
+        .tabs button { background: #1a251a; color: #fff; margin-right: 5px; }
+        .tabs button.active { background: #00ff88; color: #000; }
+    </style>
 </head>
 <body>
-    <!-- INTRO -->
-    <div id="intro-screen" class="intro-screen">
-        <div class="intro-logo-container">
-            <img src="https://i.ibb.co/QF5R34t6/Imagen-generada-con-Canva-IA-17-oct-2026-8-59-32-p-m.jpg" alt="GoldNexus" class="intro-logo">
-            <div class="intro-logo-glow"></div>
-        </div>
-        <h1 class="intro-title">GOLDNEXUS</h1>
-        <p class="intro-subtitle">PEOPLE • REWARDS • RANKING</p>
+    <div class="container">
+        <h1>⚙️ GoldNexus Admin Panel</h1>
         
-        <div class="intro-lang-buttons">
-            <button onclick="selectLanguage('es')">🇪🇸 Español</button>
-            <button onclick="selectLanguage('en')">🇬🇧 English</button>
-            <button onclick="selectLanguage('ru')">🇷🇺 Русский</button>
+        <div id="login-section">
+            <input type="password" id="admin-password" placeholder="Contraseña de administrador">
+            <button onclick="login()">Entrar</button>
+        </div>
+
+        <div id="admin-panel" style="display: none;">
+            <div class="tabs">
+                <button class="active" onclick="showTab('tasks')">Tareas</button>
+                <button onclick="showTab('users')">Usuarios</button>
+                <button onclick="showTab('withdrawals')">Retiros</button>
+            </div>
+
+            <div id="tab-tasks" class="tab active">
+                <h2>Agregar Tarea</h2>
+                <input type="text" id="task-title" placeholder="Nombre de la tarea">
+                <input type="text" id="task-link" placeholder="Enlace (https://t.me/... o https://t.me/Bot?start=...)">
+                <input type="number" id="task-reward" placeholder="Recompensa USDT" step="0.01" value="1.00">
+                <button onclick="addTask()">➕ Agregar Tarea</button>
+                <h2>Tareas Activas</h2>
+                <div id="tasks-list"></div>
+            </div>
+
+            <div id="tab-users" class="tab">
+                <h2>Usuarios</h2>
+                <div id="users-list"></div>
+            </div>
+
+            <div id="tab-withdrawals" class="tab">
+                <h2>Solicitudes de Retiro</h2>
+                <div id="withdrawals-list"></div>
+            </div>
         </div>
     </div>
 
-    <!-- APP PRINCIPAL CON PESTAÑAS -->
-    <div id="main-app" class="app-container" style="display: none;">
-        
-        <header>
-            <div class="logo-container">
-                <div class="logo-wrapper">
-                    <img src="https://i.ibb.co/QF5R34t6/Imagen-generada-con-Canva-IA-17-oct-2026-8-59-32-p-m.jpg" alt="Logo" class="logo">
-                    <div class="logo-glow"></div>
-                </div>
-                <div>
-                    <h1 class="glow-text">GOLDNEXUS</h1>
-                    <p class="subtitle">PEOPLE • REWARDS • RANKING</p>
-                </div>
-            </div>
-            <button class="lang-btn" onclick="showLanguageSelector()">🌐</button>
-        </header>
+    <script>
+        let adminPassword = '';
 
-        <!-- CONTENIDO DE LAS PESTAÑAS -->
-        <div class="content-area">
+        function login() {
+            adminPassword = document.getElementById('admin-password').value;
+            fetch('/api/admin/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: adminPassword })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('login-section').style.display = 'none';
+                    document.getElementById('admin-panel').style.display = 'block';
+                    loadTasks();
+                    loadUsers();
+                    loadWithdrawals();
+                } else {
+                    alert('Contraseña incorrecta');
+                }
+            });
+        }
 
-            <!-- PESTAÑA 1: HOME -->
-            <div id="tab-home" class="tab-content active">
-                <div class="card balance-card">
-                    <div class="balance-header"><span data-i18n="balance">Saldo Total</span></div>
-                    <div class="balance-amount">
-                        <img src="https://i.ibb.co/nsqd57K1/Imagen-generada-con-Canva-IA-17-oct-2026-8-34-27-p-m.jpg" class="coin-img" alt="USDT">
-                        <span id="balance">0.00</span> <span class="currency">USDT</span>
-                    </div>
-                    <div class="action-buttons">
-                        <button class="btn-primary" onclick="switchTab('tasks')" data-i18n="earn_more">Ganar Más</button>
-                        <button class="btn-primary" id="withdraw-btn" data-i18n="withdraw">Retirar</button>
-                    </div>
-                </div>
+        function showTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tabs button').forEach(b => b.classList.remove('active'));
+            document.getElementById('tab-' + tab).classList.add('active');
+            event.target.classList.add('active');
+        }
 
-                <div class="tasks-section">
-                    <h2 data-i18n="tasks">Tareas de Hoy</h2>
-                    <div class="task-card">
-                        <img src="https://i.ibb.co/HLTzCbFk/Imagen-generada-con-Canva-IA-17-oct-2026-8-41-00-p-m.jpg" class="task-icon-img" alt="Check-in">
-                        <div class="task-info">
-                            <h3 data-i18n="checkin">Check-in Diario</h3>
-                            <p class="reward">+1.00 USDT</p>
+        function loadTasks() {
+            fetch('/api/admin/tasks')
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('tasks-list').innerHTML = data.map(task => `
+                        <div style="display: flex; justify-content: space-between; padding: 10px; background: #0a0e0a; border-radius: 8px; margin-bottom: 5px;">
+                            <span>${task.title} - ${task.reward} USDT</span>
+                            <button class="danger" onclick="deleteTask(${task.id})">🗑️</button>
                         </div>
-                        <button class="btn-claim" id="checkin-btn" data-i18n="claim">Reclamar</button>
-                    </div>
-                </div>
-            </div>
+                    `).join('');
+                });
+        }
 
-            <!-- PESTAÑA 2: TAREAS -->
-            <div id="tab-tasks" class="tab-content">
-                <h2 style="margin-bottom: 15px;" data-i18n="tasks">Tareas Disponibles</h2>
-                <div id="tasks-container"></div>
-            </div>
+        function addTask() {
+            const title = document.getElementById('task-title').value;
+            const link = document.getElementById('task-link').value;
+            const reward = document.getElementById('task-reward').value;
+            fetch('/api/admin/tasks', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title, link, reward })
+            }).then(() => {
+                loadTasks();
+                document.getElementById('task-title').value = '';
+                document.getElementById('task-link').value = '';
+            });
+        }
 
-            <!-- PESTAÑA 3: RANKING -->
-            <div id="tab-ranking" class="tab-content">
-                <div class="card" style="padding: 15px;">
-                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px; justify-content: center;">
-                        <img src="https://i.ibb.co/7xntPvkY/Imagen-generada-con-Canva-IA-17-oct-2026-8-37-56-p-m.jpg" style="width: 50px; height: 50px; filter: drop-shadow(0 0 10px #ffd700);" alt="Ranking">
-                        <h2 data-i18n="ranking" style="margin: 0;">Ranking Global</h2>
-                    </div>
-                    <div id="ranking-list" class="ranking-list"></div>
-                </div>
-            </div>
+        function deleteTask(id) {
+            fetch(`/api/admin/tasks/${id}`, { method: 'DELETE' }).then(() => loadTasks());
+        }
 
-            <!-- PESTAÑA 4: REFERIDOS -->
-            <div id="tab-referrals" class="tab-content">
-                <div class="card referral-card" style="text-align: center;">
-                    <h2 data-i18n="invite">Invitar Amigos</h2>
-                    <img src="https://i.ibb.co/35LdyLhv/Imagen-generada-con-Canva-IA-17-oct-2026-7-41-05-p-m.jpg" class="floating-img" alt="Referidos">
-                    <p style="color: #889988; font-size: 13px; margin-bottom: 15px;">Gana 1.5 USDT por referido + 0.5 USDT extra si completa 3 tareas.</p>
-                    <button class="btn-primary" style="width: 100%; font-size: 16px; padding: 16px;" onclick="shareReferral()">🔗 Copiar Enlace</button>
-                </div>
-            </div>
+        function loadUsers() {
+            fetch('/api/admin/users')
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('users-list').innerHTML = `
+                        <table>
+                            <tr><th>ID</th><th>Usuario</th><th>Saldo</th><th>Refs</th><th>Estado</th><th>Acción</th></tr>
+                            ${data.map(u => `
+                                <tr>
+                                    <td>${u.id}</td>
+                                    <td>${u.username}</td>
+                                    <td>${u.balance.toFixed(2)}</td>
+                                    <td>${u.referidos}</td>
+                                    <td>${u.banned ? '🚫 Baneado' : '✅ Activo'}</td>
+                                    <td>
+                                        <button onclick="toggleBan(${u.id}, ${u.banned})">${u.banned ? 'Desbanear' : 'Banear'}</button>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </table>
+                    `;
+                });
+        }
 
-        </div>
+        function toggleBan(userId, banned) {
+            fetch(`/api/admin/ban/${userId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ banned: banned ? 0 : 1 })
+            }).then(() => loadUsers());
+        }
 
-        <!-- BARRA DE NAVEGACIÓN INFERIOR -->
-        <nav class="bottom-nav">
-            <button class="nav-item active" onclick="switchTab('home', this)">
-                <span class="nav-icon">🏠</span>
-                <span class="nav-text" data-i18n="home_btn">Inicio</span>
-            </button>
-            <button class="nav-item" onclick="switchTab('tasks', this)">
-                <span class="nav-icon">✅</span>
-                <span class="nav-text" data-i18n="tasks_btn">Tareas</span>
-            </button>
-            <button class="nav-item" onclick="switchTab('ranking', this)">
-                <span class="nav-icon">🏆</span>
-                <span class="nav-text" data-i18n="ranking_btn">Ranking</span>
-            </button>
-            <button class="nav-item" onclick="switchTab('referrals', this)">
-                <span class="nav-icon">👥</span>
-                <span class="nav-text" data-i18n="invite_btn">Amigos</span>
-            </button>
-        </nav>
-    </div>
+        function loadWithdrawals() {
+            fetch('/api/admin/withdrawals')
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('withdrawals-list').innerHTML = `
+                        <table>
+                            <tr><th>Usuario</th><th>Monto</th><th>Wallet</th><th>Estado</th><th>Acción</th></tr>
+                            ${data.map(w => `
+                                <tr>
+                                    <td>${w.username}</td>
+                                    <td>${w.amount} USDT</td>
+                                    <td>${w.wallet}</td>
+                                    <td>${w.status}</td>
+                                    <td>
+                                        ${w.status === 'pending' ? `
+                                            <button onclick="approveWithdrawal(${w.id})">✅ Aprobar</button>
+                                            <button class="danger" onclick="rejectWithdrawal(${w.id})">❌ Rechazar</button>
+                                        ` : '—'}
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </table>
+                    `;
+                });
+        }
 
-    <script src="lang.js"></script>
-    <script src="intro.js"></script>
-    <script src="app.js"></script>
+        function approveWithdrawal(id) {
+            fetch(`/api/admin/withdrawals/${id}/approve`, { method: 'POST' }).then(() => loadWithdrawals());
+        }
+
+        function rejectWithdrawal(id) {
+            fetch(`/api/admin/withdrawals/${id}/reject`, { method: 'POST' }).then(() => loadWithdrawals());
+        }
+    </script>
 </body>
   </html>
