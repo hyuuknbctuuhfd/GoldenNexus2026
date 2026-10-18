@@ -2,8 +2,23 @@ const tg = window.Telegram.WebApp;
 tg.expand();
 const userId = tg.initDataUnsafe?.user?.id;
 
-const ROBOT_ICON = "https://i.ibb.co/S46bW8MD/Imagen-generada-con-Canva-IA-17-oct-2026-8-38-40-p-m.jpg";
-const MEGAFONO_ICON = "https://i.ibb.co/Q30wNS0x/Imagen-generada-con-Canva-IA-17-oct-2026-8-39-25-p-m.jpg";
+// Enlaces a las imágenes en GitHub (asegúrate de que sean .png)
+const ROBOT_ICON = "https://raw.githubusercontent.com/d7366957-collab/GoldNexus1/main/public/robot.png";
+const MEGAFONO_ICON = "https://raw.githubusercontent.com/d7366957-collab/GoldNexus1/main/public/megafono.png";
+
+// --- SISTEMA DE NOTIFICACIONES BONITAS ---
+function showToast(message, isError = false) {
+    const container = document.getElementById('toast-container');
+    const toast = document.createElement('div');
+    toast.className = `toast ${isError ? 'error' : ''}`;
+    toast.innerHTML = `<span>${isError ? '❌' : '✅'}</span> <span>${message}</span>`;
+    container.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.animation = 'fadeOut 0.3s ease forwards';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
 
 function switchTab(tabName, btnElement = null) {
     document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
@@ -30,11 +45,24 @@ function animateValue(id, start, end, duration) {
     window.requestAnimationFrame(step);
 }
 
+function getReferralLink() {
+    return `https://t.me/GoldNexusRewardsBot?start=${userId}`;
+}
+
 function loadUserData() {
     if (!userId) return;
     
     fetch(`/api/user/${userId}`).then(res => res.json()).then(data => {
         animateValue('balance', 0, data.balance, 1500);
+        document.getElementById('withdraw-balance').innerText = data.balance.toFixed(2);
+        
+        // Lógica para calcular lo que recibe al retirar
+        const receiveAmount = Math.max(0, data.balance); 
+        document.getElementById('receive-amount').innerText = receiveAmount.toFixed(2) + ' USDT';
+
+        document.getElementById('ref-link-text').innerText = getReferralLink();
+        document.getElementById('total-refs').innerText = data.referidos;
+        document.getElementById('total-earned').innerText = (data.referidos * 1.5).toFixed(2) + ' USDT';
     }).catch(err => console.log(err));
     
     fetch('/api/ranking').then(res => res.json()).then(data => {
@@ -87,6 +115,7 @@ function openAndVerify(link, taskId) {
     window.open(link, '_blank');
     if (userId) {
         tg.sendData(JSON.stringify({ action: 'verify_task', taskId: taskId, userId: userId }));
+        showToast('Verificando tarea...');
     }
 }
 
@@ -97,44 +126,67 @@ function claimBotTask(taskId) {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId, taskId })
         }).then(res => res.json()).then(data => {
-            alert(data.message || data.error);
+            showToast(data.message || data.error, !data.success);
             if (data.success) loadUserData();
         });
     }
 }
 
-function shareReferral() {
-    // ⚠️ IMPORTANTE: Cambia 'GoldNexusRewardsBot' por el nombre de usuario real de tu bot
-    const link = `https://t.me/GoldNexusRewardsBot?start=${userId}`;
-    navigator.clipboard.writeText(link).then(() => {
-        alert('🔗 ¡Enlace copiado!\n' + link);
-    }).catch(() => {
-        alert('🔗 Tu enlace es:\n' + link);
+function copyLink() {
+    navigator.clipboard.writeText(getReferralLink()).then(() => {
+        showToast('¡Enlace copiado al portapapeles!');
     });
 }
 
+function shareTelegram() {
+    const text = encodeURIComponent("¡Únete a GoldNexus y gana USDT por completar tareas! 🚀");
+    const url = encodeURIComponent(getReferralLink());
+    window.open(`https://t.me/share/url?url=${url}&text=${text}`, '_blank');
+}
+
+function shareGeneral() {
+    if (navigator.share) {
+        navigator.share({
+            title: 'GoldNexus Rewards',
+            text: '¡Únete y gana USDT!',
+            url: getReferralLink(),
+        }).catch(console.error);
+    } else {
+        copyLink();
+    }
+}
+
 document.getElementById('checkin-btn').addEventListener('click', () => {
-    if (!userId) return alert("Abre esto desde Telegram");
+    if (!userId) return showToast("Abre esto desde Telegram", true);
     fetch('/api/checkin', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId })
     }).then(res => res.json()).then(data => {
-        alert(data.message || data.error);
+        showToast(data.message || data.error, !data.success);
         if (data.success) loadUserData();
     });
 });
 
-document.getElementById('withdraw-btn').addEventListener('click', () => {
-    if (!userId) return alert("Abre esto desde Telegram");
-    const wallet = prompt('Ingresa tu dirección de wallet BEP20:');
-    if (!wallet) return;
-    const amount = parseFloat(prompt('¿Cuánto deseas retirar? (Mínimo 10 USDT)'));
-    if (!amount || amount < 10) return alert('Monto inválido, el mínimo es 10 USDT');
+// --- LÓGICA DE RETIRO ---
+function requestWithdraw() {
+    if (!userId) return showToast("Abre esto desde Telegram", true);
+    
+    const wallet = document.getElementById('wallet-input').value;
+    if (!wallet || wallet.length < 20) return showToast('Dirección de wallet inválida', true);
+    
+    const amount = parseFloat(document.getElementById('withdraw-balance').innerText);
+    if (amount < 10) return showToast('El mínimo de retiro es 10 USDT', true);
 
     fetch('/api/withdraw', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, amount, wallet })
-    }).then(res => res.json()).then(data => alert(data.message || data.error));
-});
+    }).then(res => res.json()).then(data => {
+        showToast(data.message || data.error, !data.success);
+        if (data.success) {
+            document.getElementById('wallet-input').value = '';
+            loadUserData();
+        }
+    });
+}
 
 loadUserData();
