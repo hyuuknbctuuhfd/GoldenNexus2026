@@ -2,7 +2,6 @@ const tg = window.Telegram.WebApp;
 tg.expand();
 const userId = tg.initDataUnsafe?.user?.id;
 
-// Enlaces actualizados a tu usuario y repositorio reales
 const ROBOT_ICON = "https://raw.githubusercontent.com/hyuuknbctuuhfd/GoldenNexus2026/main/public/robot.png";
 const MEGAFONO_ICON = "https://raw.githubusercontent.com/hyuuknbctuuhfd/GoldenNexus2026/main/public/megafono.png";
 
@@ -46,6 +45,40 @@ function getReferralLink() {
     return `https://t.me/GoldNexusRewardsBot?start=${userId}`;
 }
 
+function createTaskHTML(task, completed) {
+    const isBotTask = task.link.includes('bot?start=') || task.link.includes('Bot?start=') || task.link.includes('bot');
+    const iconUrl = isBotTask ? ROBOT_ICON : MEGAFONO_ICON;
+    
+    let buttonHTML = '';
+
+    if (completed) {
+        buttonHTML = `<button class="btn-claim" disabled style="opacity:0.5; background:#333; color:#888;">Completado</button>`;
+    } else {
+        // Si ya le dio clic a "Unirse" (guardado en la sesión), mostramos "Reclamar"
+        const hasClickedJoin = sessionStorage.getItem(`joined_${task.id}`);
+        
+        if (hasClickedJoin) {
+            buttonHTML = `<button class="btn-claim" style="background: #ffd700; color: #000;" onclick="claimTaskDirectly(${task.id})">Reclamar</button>`;
+        } else {
+            // Si no ha hecho clic, mostramos "Unirse" (o "Ir al Bot")
+            const btnText = isBotTask ? "Ir al Bot" : "Unirse";
+            const btnColor = isBotTask ? "background: #0088cc; color: white;" : "";
+            buttonHTML = `<button class="btn-claim" style="${btnColor}" onclick="joinAndWait('${task.link}', ${task.id})">${btnText}</button>`;
+        }
+    }
+
+    return `
+        <div class="task-card">
+            <img src="${iconUrl}" class="task-icon-img" alt="Icon">
+            <div class="task-info">
+                <h3>${task.title}</h3>
+                <p class="reward">+${task.reward} USDT</p>
+            </div>
+            ${buttonHTML}
+        </div>
+    `;
+}
+
 function loadUserData() {
     if (!userId) return;
     
@@ -67,63 +100,57 @@ function loadUserData() {
     }).catch(err => console.log(err));
 
     fetch(`/api/tasks/${userId}`).then(res => res.json()).then(data => {
-        const container = document.getElementById('tasks-container');
+        const tasksContainer = document.getElementById('tasks-container');
+        const homeTasksContainer = document.getElementById('home-tasks-container');
+        
         if (data.tasks && data.tasks.length > 0) {
-            container.innerHTML = data.tasks.map(task => {
-                const completed = data.completedIds.includes(task.id);
-                const isBotTask = task.link.includes('bot?start=') || task.link.includes('Bot?start=') || task.link.includes('bot');
-                const iconUrl = isBotTask ? ROBOT_ICON : MEGAFONO_ICON;
-                
-                let buttonHTML = '';
-                if (completed) {
-                    buttonHTML = `<button class="btn-claim" disabled style="opacity:0.5">✅ Hecho</button>`;
-                } else if (isBotTask) {
-                    buttonHTML = `
-                        <div style="display: flex; flex-direction: column; gap: 5px;">
-                            <button class="btn-claim" onclick="window.open('${task.link}', '_blank')" style="background: #0088cc; color: white; padding: 8px; font-size: 11px;">1. Ir al Bot</button>
-                            <button class="btn-claim" style="background: #ffd700; padding: 8px; font-size: 11px;" onclick="claimBotTask(${task.id})">2. Reclamar</button>
-                        </div>
-                    `;
-                } else {
-                    buttonHTML = `<button class="btn-claim" onclick="openAndVerify('${task.link}', ${task.id})">Unirse</button>`;
-                }
+            let tasksHTML = '';
+            let homeTasksHTML = '';
 
-                return `
-                    <div class="task-card">
-                        <img src="${iconUrl}" class="task-icon-img" alt="Icon">
-                        <div class="task-info">
-                            <h3>${task.title}</h3>
-                            <p class="reward">+${task.reward} USDT</p>
-                        </div>
-                        ${buttonHTML}
-                    </div>
-                `;
-            }).join('');
+            data.tasks.forEach(task => {
+                const completed = data.completedIds.includes(task.id);
+                const taskHtml = createTaskHTML(task, completed);
+                
+                tasksHTML += taskHtml;
+
+                // Las tareas de canales (no bots) también van al Home
+                const isBotTask = task.link.includes('bot?start=') || task.link.includes('Bot?start=') || task.link.includes('bot');
+                if (!isBotTask) {
+                    homeTasksHTML += taskHtml;
+                }
+            });
+
+            tasksContainer.innerHTML = tasksHTML;
+            homeTasksContainer.innerHTML = homeTasksHTML;
+
         } else {
-            container.innerHTML = `<p style="text-align:center; color:#889988; margin-top:20px;">No hay tareas disponibles ahora.</p>`;
+            tasksContainer.innerHTML = `<p style="text-align:center; color:#889988; margin-top:20px;">No hay tareas disponibles ahora.</p>`;
         }
     }).catch(err => console.log(err));
 }
 
-function openAndVerify(link, taskId) {
+// Paso 1: Abrir el enlace y guardar en sesión que ya hizo clic
+function joinAndWait(link, taskId) {
     window.open(link, '_blank');
-    if (userId) {
-        tg.sendData(JSON.stringify({ action: 'verify_task', taskId: taskId, userId: userId }));
-        showToast('Verificando tarea...');
-    }
+    sessionStorage.setItem(`joined_${taskId}`, 'true');
+    showToast('¡Ya te uniste! Vuelve y toca Reclamar.');
+    setTimeout(() => loadUserData(), 1000); // Recargar para que aparezca el botón Reclamar
 }
 
-function claimBotTask(taskId) {
+// Paso 2: Pagar directamente sin verificar nada
+function claimTaskDirectly(taskId) {
     if (!userId) return;
-    if (confirm("¿Ya te registraste en el bot? Se te abonará la recompensa.")) {
-        fetch('/api/claim-task', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId, taskId })
-        }).then(res => res.json()).then(data => {
-            showToast(data.message || data.error, !data.success);
-            if (data.success) loadUserData();
-        });
-    }
+    
+    fetch('/api/claim-task', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, taskId })
+    }).then(res => res.json()).then(data => {
+        showToast(data.message || data.error, !data.success);
+        if (data.success) {
+            sessionStorage.removeItem(`joined_${taskId}`);
+            loadUserData();
+        }
+    });
 }
 
 function copyLink() {
