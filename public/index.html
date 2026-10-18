@@ -8,13 +8,12 @@
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
-    <!-- CONTENEDOR DE NOTIFICACIONES BONITAS -->
     <div id="toast-container" class="toast-container"></div>
 
     <!-- INTRO -->
     <div id="intro-screen" class="intro-screen">
         <div class="intro-logo-container">
-            <img src="https://raw.githubusercontent.com/d7366957-collab/GoldNexus1/main/public/logo.png" alt="GoldNexus" class="intro-logo">
+            <img src="https://raw.githubusercontent.com/d7366957-collab/GoldenNexus2026/main/public/logo.png" alt="GoldNexus" class="intro-logo">
             <div class="intro-logo-glow"></div>
         </div>
         <h1 class="intro-title">GOLDNEXUS</h1>
@@ -33,7 +32,7 @@
         <header>
             <div class="logo-container">
                 <div class="logo-wrapper">
-                    <img src="https://raw.githubusercontent.com/d7366957-collab/GoldNexus1/main/public/logo.png" alt="Logo" class="logo">
+                    <img src="https://raw.githubusercontent.com/d7366957-collab/GoldenNexus2026/main/public/logo.png" alt="Logo" class="logo">
                     <div class="logo-glow"></div>
                 </div>
                 <div>
@@ -51,7 +50,7 @@
                 <div class="card balance-card">
                     <div class="balance-header"><span data-i18n="balance">Saldo Total</span></div>
                     <div class="balance-amount">
-                        <img src="https://raw.githubusercontent.com/d7366957-collab/GoldNexus1/main/public/moneda.png" class="coin-img" alt="USDT">
+                        <img src="https://raw.githubusercontent.com/d7366957-collab/GoldenNexus2026/main/public/moneda.png" class="coin-img" alt="USDT">
                         <span id="balance">0.00</span> <span class="currency">USDT</span>
                     </div>
                     <div class="action-buttons">
@@ -63,7 +62,7 @@
                 <div class="tasks-section">
                     <h2 data-i18n="tasks">Tareas de Hoy</h2>
                     <div class="task-card">
-                        <img src="https://raw.githubusercontent.com/d7366957-collab/GoldNexus1/main/public/regalo.png" class="task-icon-img" alt="Check-in">
+                        <img src="https://raw.githubusercontent.com/d7366957-collab/GoldenNexus2026/main/public/regalo.png" class="task-icon-img" alt="Check-in">
                         <div class="task-info">
                             <h3 data-i18n="checkin">Check-in Diario</h3>
                             <p class="reward">+1.00 USDT</p>
@@ -83,14 +82,14 @@
             <div id="tab-ranking" class="tab-content">
                 <div class="card" style="padding: 15px;">
                     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px; justify-content: center;">
-                        <img src="https://raw.githubusercontent.com/d7366957-collab/GoldNexus1/main/public/trofeo.png" style="width: 50px; height: 50px; filter: drop-shadow(0 0 10px #ffd700);" alt="Ranking">
+                        <img src="https://raw.githubusercontent.com/d7366957-collab/GoldenNexus2026/main/public/trofeo.png" style="width: 50px; height: 50px; filter: drop-shadow(0 0 10px #ffd700);" alt="Ranking">
                         <h2 data-i18n="ranking" style="margin: 0;">Ranking Global</h2>
                     </div>
                     <div id="ranking-list" class="ranking-list"></div>
                 </div>
             </div>
 
-            <!-- PESTAÑA 4: REFERIDOS (ESTILO COUNTRY WALLET) -->
+            <!-- PESTAÑA 4: REFERIDOS -->
             <div id="tab-referrals" class="tab-content">
                 <div class="ref-header">
                     <h2 data-i18n="invite">Invitar Amigos</h2>
@@ -98,7 +97,7 @@
                 </div>
                 
                 <div class="ref-image-container">
-                    <img src="https://raw.githubusercontent.com/d7366957-collab/GoldNexus1/main/public/cofre.png" alt="Referidos" class="ref-img">
+                    <img src="https://raw.githubusercontent.com/d7366957-collab/GoldenNexus2026/main/public/cofre.png" alt="Referidos" class="ref-img">
                 </div>
 
                 <div class="ref-pill">
@@ -136,12 +135,12 @@
                 </div>
             </div>
 
-            <!-- PESTAÑA 5: RETIRAR (ESTILO COUNTRY WALLET) -->
+            <!-- PESTAÑA 5: RETIRAR -->
             <div id="tab-withdraw" class="tab-content">
                 <div class="card" style="padding: 15px;">
                     <div class="balance-header"><span data-i18n="balance">Saldo Total</span></div>
                     <div class="balance-amount" style="font-size: 28px; margin-bottom: 20px;">
-                        <img src="https://raw.githubusercontent.com/d7366957-collab/GoldNexus1/main/public/moneda.png" class="coin-img" style="width: 30px; height: 30px;" alt="USDT">
+                        <img src="https://raw.githubusercontent.com/d7366957-collab/GoldenNexus2026/main/public/moneda.png" class="coin-img" style="width: 30px; height: 30px;" alt="USDT">
                         <span id="withdraw-balance">0.00</span> <span class="currency">USDT</span>
                     </div>
 
@@ -175,12 +174,7 @@
                         </div>
                     </div>
 
-                    <div id="withdraw-error" style="color: #ff4444; font-size: 12px; margin-bottom: 10px; display: none;">Saldo insuficiente o menos de 5 referidos</div>
-
                     <button class="btn-primary" style="width: 100%; padding: 16px; font-size: 16px;" onclick="requestWithdraw()">Retirar</button>
-
-                    <h3 style="font-size: 14px; margin: 20px 0 10px 0;">Retiros Recientes</h3>
-                    <div id="recent-withdrawals" style="font-size: 12px; color: #889988; text-align: center;">No hay retiros recientes</div>
                 </div>
             </div>
 
@@ -215,4 +209,4 @@
     <script src="intro.js"></script>
     <script src="app.js"></script>
 </body>
-                            </html>
+    </html>
