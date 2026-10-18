@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>GoldNexus</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+</head>
+<body>
+    <!-- INTRO -->
+    <div id="intro-screen" class="intro-screen">
+        <div class="intro-logo-container">
+            <img src="https://i.ibb.co/QF5R34t6/Imagen-generada-con-Canva-IA-17-oct-2026-8-59-32-p-m.jpg" alt="GoldNexus" class="intro-logo">
+            <div class="intro-logo-glow"></div>
+        </div>
+        <h1 class="intro-title">GOLDNEXUS</h1>
+        <p class="intro-subtitle">PEOPLE • REWARDS • RANKING</p>
+        
+        <div class="intro-lang-buttons">
+            <button onclick="selectLanguage('es')">🇪🇸 Español</button>
+            <button onclick="selectLanguage('en')">🇬🇧 English</button>
+            <button onclick="selectLanguage('ru')">🇷🇺 Русский</button>
+        </div>
+    </div>
+
+    <!-- APP PRINCIPAL CON PESTAÑAS -->
+    <div id="main-app" class="app-container" style="display: none;">
+        
+        <header>
+            <div class="logo-container">
+                <div class="logo-wrapper">
+                    <img src="https://i.ibb.co/QF5R34t6/Imagen-generada-con-Canva-IA-17-oct-2026-8-59-32-p-m.jpg" alt="Logo" class="logo">
+                    <div class="logo-glow"></div>
+                </div>
+                <div>
+                    <h1 class="glow-text">GOLDNEXUS</h1>
+                    <p class="subtitle">PEOPLE • REWARDS • RANKING</p>
+                </div>
+            </div>
+            <button class="lang-btn" onclick="showLanguageSelector()">🌐</button>
+        </header>
+
+        <!-- CONTENIDO DE LAS PESTAÑAS -->
+        <div class="content-area">
+
+            <!-- PESTAÑA 1: HOME -->
+            <div id="tab-home" class="tab-content active">
+                <div class="card balance-card">
+                    <div class="balance-header"><span data-i18n="balance">Saldo Total</span></div>
+                    <div class="balance-amount">
+                        <img src="https://i.ibb.co/nsqd57K1/Imagen-generada-con-Canva-IA-17-oct-2026-8-34-27-p-m.jpg" class="coin-img" alt="USDT">
+                        <span id="balance">0.00</span> <span class="currency">USDT</span>
+                    </div>
+                    <div class="action-buttons">
+                        <button class="btn-primary" onclick="switchTab('tasks')" data-i18n="earn_more">Ganar Más</button>
+                        <button class="btn-primary" id="withdraw-btn" data-i18n="withdraw">Retirar</button>
+                    </div>
+                </div>
+
+                <div class="tasks-section">
+                    <h2 data-i18n="tasks">Tareas de Hoy</h2>
+                    <div class="task-card">
+                        <img src="https://i.ibb.co/HLTzCbFk/Imagen-generada-con-Canva-IA-17-oct-2026-8-41-00-p-m.jpg" class="task-icon-img" alt="Check-in">
+                        <div class="task-info">
+                            <h3 data-i18n="checkin">Check-in Diario</h3>
+                            <p class="reward">+1.00 USDT</p>
+                        </div>
+                        <button class="btn-claim" id="checkin-btn" data-i18n="claim">Reclamar</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PESTAÑA 2: TAREAS -->
+            <div id="tab-tasks" class="tab-content">
+                <h2 style="margin-bottom: 15px;" data-i18n="tasks">Tareas Disponibles</h2>
+                <div id="tasks-container"></div>
+            </div>
+
+            <!-- PESTAÑA 3: RANKING -->
+            <div id="tab-ranking" class="tab-content">
+                <div class="card" style="padding: 15px;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px; justify-content: center;">
+                        <img src="https://i.ibb.co/7xntPvkY/Imagen-generada-con-Canva-IA-17-oct-2026-8-37-56-p-m.jpg" style="width: 50px; height: 50px; filter: drop-shadow(0 0 10px #ffd700);" alt="Ranking">
+                        <h2 data-i18n="ranking" style="margin: 0;">Ranking Global</h2>
+                    </div>
+                    <div id="ranking-list" class="ranking-list"></div>
+                </div>
+            </div>
+
+            <!-- PESTAÑA 4: REFERIDOS -->
+            <div id="tab-referrals" class="tab-content">
+                <div class="card referral-card" style="text-align: center;">
+                    <h2 data-i18n="invite">Invitar Amigos</h2>
+                    <img src="https://i.ibb.co/35LdyLhv/Imagen-generada-con-Canva-IA-17-oct-2026-7-41-05-p-m.jpg" class="floating-img" alt="Referidos">
+                    <p style="color: #889988; font-size: 13px; margin-bottom: 15px;">Gana 1.5 USDT por referido + 0.5 USDT extra si completa 3 tareas.</p>
+                    <button class="btn-primary" style="width: 100%; font-size: 16px; padding: 16px;" onclick="shareReferral()">🔗 Copiar Enlace</button>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- BARRA DE NAVEGACIÓN INFERIOR -->
+        <nav class="bottom-nav">
+            <button class="nav-item active" onclick="switchTab('home', this)">
+                <span class="nav-icon">🏠</span>
+                <span class="nav-text" data-i18n="home_btn">Inicio</span>
+            </button>
+            <button class="nav-item" onclick="switchTab('tasks', this)">
+                <span class="nav-icon">✅</span>
+                <span class="nav-text" data-i18n="tasks_btn">Tareas</span>
+            </button>
+            <button class="nav-item" onclick="switchTab('ranking', this)">
+                <span class="nav-icon">🏆</span>
+                <span class="nav-text" data-i18n="ranking_btn">Ranking</span>
+            </button>
+            <button class="nav-item" onclick="switchTab('referrals', this)">
+                <span class="nav-icon">👥</span>
+                <span class="nav-text" data-i18n="invite_btn">Amigos</span>
+            </button>
+        </nav>
+    </div>
+
+    <script src="lang.js"></script>
+    <script src="intro.js"></script>
+    <script src="app.js"></script>
+</body>
+  </html>
