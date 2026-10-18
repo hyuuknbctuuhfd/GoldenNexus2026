@@ -54,13 +54,10 @@ function createTaskHTML(task, completed) {
     if (completed) {
         buttonHTML = `<button class="btn-claim" disabled style="opacity:0.5; background:#333; color:#888;">Completado</button>`;
     } else {
-        // Si ya le dio clic a "Unirse" (guardado en la sesión), mostramos "Reclamar"
         const hasClickedJoin = sessionStorage.getItem(`joined_${task.id}`);
-        
         if (hasClickedJoin) {
             buttonHTML = `<button class="btn-claim" style="background: #ffd700; color: #000;" onclick="claimTaskDirectly(${task.id})">Reclamar</button>`;
         } else {
-            // Si no ha hecho clic, mostramos "Unirse" (o "Ir al Bot")
             const btnText = isBotTask ? "Ir al Bot" : "Unirse";
             const btnColor = isBotTask ? "background: #0088cc; color: white;" : "";
             buttonHTML = `<button class="btn-claim" style="${btnColor}" onclick="joinAndWait('${task.link}', ${task.id})">${btnText}</button>`;
@@ -112,12 +109,8 @@ function loadUserData() {
                 const taskHtml = createTaskHTML(task, completed);
                 
                 tasksHTML += taskHtml;
-
-                // Las tareas de canales (no bots) también van al Home
-                const isBotTask = task.link.includes('bot?start=') || task.link.includes('Bot?start=') || task.link.includes('bot');
-                if (!isBotTask) {
-                    homeTasksHTML += taskHtml;
-                }
+                // AQUÍ ESTÁ EL CAMBIO: Ahora TODAS las tareas van al Home
+                homeTasksHTML += taskHtml;
             });
 
             tasksContainer.innerHTML = tasksHTML;
@@ -129,18 +122,15 @@ function loadUserData() {
     }).catch(err => console.log(err));
 }
 
-// Paso 1: Abrir el enlace y guardar en sesión que ya hizo clic
 function joinAndWait(link, taskId) {
     window.open(link, '_blank');
     sessionStorage.setItem(`joined_${taskId}`, 'true');
     showToast('¡Ya te uniste! Vuelve y toca Reclamar.');
-    setTimeout(() => loadUserData(), 1000); // Recargar para que aparezca el botón Reclamar
+    setTimeout(() => loadUserData(), 1000); 
 }
 
-// Paso 2: Pagar directamente sin verificar nada
 function claimTaskDirectly(taskId) {
     if (!userId) return;
-    
     fetch('/api/claim-task', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, taskId })
@@ -192,9 +182,11 @@ function requestWithdraw() {
     if (!userId) return showToast("Abre esto desde Telegram", true);
     const wallet = document.getElementById('wallet-input').value;
     if (!wallet || wallet.length < 20) return showToast('Dirección de wallet inválida', true);
+    
     const amount = parseFloat(document.getElementById('withdraw-balance').innerText);
     if (amount < 10) return showToast('El mínimo de retiro es 10 USDT', true);
 
+    // Enviamos la petición al servidor y mostramos el error si no tiene 5 referidos
     fetch('/api/withdraw', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, amount, wallet })
