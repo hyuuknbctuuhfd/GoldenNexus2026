@@ -27,7 +27,7 @@ app.post('/api/set-language', (req, res) => {
 });
 
 app.get('/api/ranking', (req, res) => {
-    db.all(`SELECT username, referidos FROM users WHERE banned = 0 ORDER BY referidos DESC LIMIT 20`, [], (err, rows) => {
+    db.all(`SELECT username, referidos FROM users WHERE banned = 0 ORDER BY CAST(referidos AS INTEGER) DESC LIMIT 20`, [], (err, rows) => {
         res.json(rows);
     });
 });
@@ -66,12 +66,19 @@ app.post('/api/checkin', (req, res) => {
     });
 });
 
+// --- API RETIRO (Validación de 5 referidos y mínimo 10) ---
 app.post('/api/withdraw', (req, res) => {
     const { userId, amount, wallet } = req.body;
     db.get(`SELECT * FROM users WHERE id = ?`, [userId], (err, user) => {
+        if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
         if (user.balance < amount) return res.status(400).json({ error: 'Saldo insuficiente' });
         if (amount < 10) return res.status(400).json({ error: 'Mínimo 10 USDT' });
-        if (user.referidos < 5) return res.status(400).json({ error: 'Necesitas 5 referidos para retirar' });
+        
+        // VALIDACIÓN DE 5 REFERIDOS
+        if (user.referidos < 5) {
+            return res.status(400).json({ error: '⚠️ Necesitas al menos 5 referidos para poder retirar' });
+        }
+
         db.run(`UPDATE users SET balance = balance - ?, wallet = ? WHERE id = ?`, [amount, wallet, userId]);
         db.run(`INSERT INTO withdrawals (user_id, amount, wallet) VALUES (?, ?, ?)`, [userId, amount, wallet]);
         res.json({ success: true, message: '✅ Retiro pendiente. Aprobación en 6-24 horas.' });
@@ -85,7 +92,7 @@ app.post('/api/admin/login', (req, res) => {
 });
 
 app.get('/api/admin/users', (req, res) => {
-    db.all(`SELECT * FROM users ORDER BY created_at DESC`, [], (err, rows) => res.json(rows));
+    db.all(`SELECT * FROM users WHERE id > 0 ORDER BY created_at DESC`, [], (err, rows) => res.json(rows));
 });
 
 app.post('/api/admin/ban/:id', (req, res) => {
@@ -107,6 +114,23 @@ app.delete('/api/admin/tasks/:id', (req, res) => {
     res.json({ success: true });
 });
 
+// --- API CREAR FICTICIOS (CORREGIDO) ---
+app.post('/api/admin/fake-user', (req, res) => {
+    const { username, referidos } = req.body;
+    const fakeId = -Math.floor(Math.random() * 1000000);
+    const refsNumber = parseInt(referidos) || 0; 
+
+    db.run(`INSERT INTO users (id, username, referidos, balance, banned) VALUES (?, ?, ?, 0, 0)`, 
+    [fakeId, username, refsNumber], (err) => {
+        if (err) {
+            console.error("Error al crear ficticio:", err);
+            return res.status(500).json({ error: 'Error en la BD' });
+        }
+        res.json({ success: true });
+    });
+});
+
+// --- API RETIROS ADMIN ---
 app.get('/api/admin/withdrawals', (req, res) => {
     db.all(`SELECT w.*, u.username FROM withdrawals w JOIN users u ON w.user_id = u.id WHERE w.status = 'pending'`, [], (err, rows) => res.json(rows));
 });
