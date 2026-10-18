@@ -2,18 +2,16 @@ const tg = window.Telegram.WebApp;
 tg.expand();
 const userId = tg.initDataUnsafe?.user?.id;
 
-// Enlaces a las imágenes en GitHub (asegúrate de que sean .png)
-const ROBOT_ICON = "https://raw.githubusercontent.com/d7366957-collab/GoldNexus1/main/public/robot.png";
-const MEGAFONO_ICON = "https://raw.githubusercontent.com/d7366957-collab/GoldNexus1/main/public/megafono.png";
+// Enlaces actualizados al repositorio GoldenNexus2026
+const ROBOT_ICON = "https://raw.githubusercontent.com/d7366957-collab/GoldenNexus2026/main/public/robot.png";
+const MEGAFONO_ICON = "https://raw.githubusercontent.com/d7366957-collab/GoldenNexus2026/main/public/megafono.png";
 
-// --- SISTEMA DE NOTIFICACIONES BONITAS ---
 function showToast(message, isError = false) {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
     toast.className = `toast ${isError ? 'error' : ''}`;
     toast.innerHTML = `<span>${isError ? '❌' : '✅'}</span> <span>${message}</span>`;
     container.appendChild(toast);
-
     setTimeout(() => {
         toast.style.animation = 'fadeOut 0.3s ease forwards';
         setTimeout(() => toast.remove(), 300);
@@ -23,7 +21,6 @@ function showToast(message, isError = false) {
 function switchTab(tabName, btnElement = null) {
     document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
     document.getElementById(`tab-${tabName}`).classList.add('active');
-
     document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('active'));
     if (btnElement) btnElement.classList.add('active');
     else {
@@ -55,11 +52,8 @@ function loadUserData() {
     fetch(`/api/user/${userId}`).then(res => res.json()).then(data => {
         animateValue('balance', 0, data.balance, 1500);
         document.getElementById('withdraw-balance').innerText = data.balance.toFixed(2);
-        
-        // Lógica para calcular lo que recibe al retirar
         const receiveAmount = Math.max(0, data.balance); 
         document.getElementById('receive-amount').innerText = receiveAmount.toFixed(2) + ' USDT';
-
         document.getElementById('ref-link-text').innerText = getReferralLink();
         document.getElementById('total-refs').innerText = data.referidos;
         document.getElementById('total-earned').innerText = (data.referidos * 1.5).toFixed(2) + ' USDT';
@@ -167,13 +161,10 @@ document.getElementById('checkin-btn').addEventListener('click', () => {
     });
 });
 
-// --- LÓGICA DE RETIRO ---
 function requestWithdraw() {
     if (!userId) return showToast("Abre esto desde Telegram", true);
-    
     const wallet = document.getElementById('wallet-input').value;
     if (!wallet || wallet.length < 20) return showToast('Dirección de wallet inválida', true);
-    
     const amount = parseFloat(document.getElementById('withdraw-balance').innerText);
     if (amount < 10) return showToast('El mínimo de retiro es 10 USDT', true);
 
