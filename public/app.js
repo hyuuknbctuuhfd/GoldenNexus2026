@@ -2,9 +2,9 @@ const tg = window.Telegram.WebApp;
 tg.expand();
 const userId = tg.initDataUnsafe?.user?.id;
 
-// Enlaces actualizados al repositorio GoldenNexus2026
-const ROBOT_ICON = "https://raw.githubusercontent.com/d7366957-collab/GoldenNexus2026/main/public/robot.png";
-const MEGAFONO_ICON = "https://raw.githubusercontent.com/d7366957-collab/GoldenNexus2026/main/public/megafono.png";
+// Enlaces actualizados a tu usuario y repositorio reales
+const ROBOT_ICON = "https://raw.githubusercontent.com/hyuuknbctuuhfd/GoldenNexus2026/main/public/robot.png";
+const MEGAFONO_ICON = "https://raw.githubusercontent.com/hyuuknbctuuhfd/GoldenNexus2026/main/public/megafono.png";
 
 function showToast(message, isError = false) {
     const container = document.getElementById('toast-container');
