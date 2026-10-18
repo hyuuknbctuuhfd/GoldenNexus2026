@@ -9,16 +9,16 @@
         .container { max-width: 900px; margin: 0 auto; background: #111811; padding: 20px; border-radius: 12px; border: 1px solid #1a251a; }
         h1 { color: #ffd700; margin-bottom: 20px; }
         h2 { color: #00ff88; margin: 20px 0 10px; }
-        input, button, select { padding: 10px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #1a251a; background: #0a0e0a; color: #fff; }
+        input, button, select { padding: 10px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #1a251a; background: #0a0e0a; color: #fff; width: 100%; box-sizing: border-box;}
         button { background: #00ff88; color: #000; font-weight: bold; cursor: pointer; border: none; }
         button:hover { background: #00cc6a; }
         button.danger { background: #ff4444; color: #fff; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #1a251a; }
+        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #1a251a; font-size: 12px;}
         th { color: #889988; }
         .tab { display: none; }
         .tab.active { display: block; }
-        .tabs button { background: #1a251a; color: #fff; margin-right: 5px; }
+        .tabs button { background: #1a251a; color: #fff; margin-right: 5px; width: auto; padding: 10px 20px;}
         .tabs button.active { background: #00ff88; color: #000; }
     </style>
 </head>
@@ -35,24 +35,37 @@
             <div class="tabs">
                 <button class="active" onclick="showTab('tasks')">Tareas</button>
                 <button onclick="showTab('users')">Usuarios</button>
+                <button onclick="showTab('fake')">Crear Ficticios</button>
                 <button onclick="showTab('withdrawals')">Retiros</button>
             </div>
 
+            <!-- PESTAÑA TAREAS -->
             <div id="tab-tasks" class="tab active">
                 <h2>Agregar Tarea</h2>
-                <input type="text" id="task-title" placeholder="Nombre de la tarea">
-                <input type="text" id="task-link" placeholder="Enlace (https://t.me/... o https://t.me/Bot?start=...)">
+                <input type="text" id="task-title" placeholder="Nombre de la tarea (ej. Unirse al Canal)">
+                <input type="text" id="task-link" placeholder="Enlace (https://t.me/... o bot?start=...)">
                 <input type="number" id="task-reward" placeholder="Recompensa USDT" step="0.01" value="1.00">
                 <button onclick="addTask()">➕ Agregar Tarea</button>
                 <h2>Tareas Activas</h2>
                 <div id="tasks-list"></div>
             </div>
 
+            <!-- PESTAÑA USUARIOS -->
             <div id="tab-users" class="tab">
-                <h2>Usuarios</h2>
+                <h2>Usuarios Reales</h2>
                 <div id="users-list"></div>
             </div>
 
+            <!-- PESTAÑA CREAR FICTICIOS -->
+            <div id="tab-fake" class="tab">
+                <h2>Crear Usuario Ficticio</h2>
+                <p style="color: #889988; font-size: 12px; margin-bottom: 15px;">Añade usuarios al ranking para motivar a los reales.</p>
+                <input type="text" id="fake-username" placeholder="Nombre del usuario (ej. CryptoKing)">
+                <input type="number" id="fake-refs" placeholder="Cantidad de Referidos (ej. 20)">
+                <button onclick="addFakeUser()">➕ Crear Usuario Ficticio</button>
+            </div>
+
+            <!-- PESTAÑA RETIROS -->
             <div id="tab-withdrawals" class="tab">
                 <h2>Solicitudes de Retiro</h2>
                 <div id="withdrawals-list"></div>
@@ -91,14 +104,15 @@
             event.target.classList.add('active');
         }
 
+        // --- TAREAS ---
         function loadTasks() {
             fetch('/api/admin/tasks')
                 .then(res => res.json())
                 .then(data => {
                     document.getElementById('tasks-list').innerHTML = data.map(task => `
-                        <div style="display: flex; justify-content: space-between; padding: 10px; background: #0a0e0a; border-radius: 8px; margin-bottom: 5px;">
+                        <div style="display: flex; justify-content: space-between; padding: 10px; background: #0a0e0a; border-radius: 8px; margin-bottom: 5px; align-items: center;">
                             <span>${task.title} - ${task.reward} USDT</span>
-                            <button class="danger" onclick="deleteTask(${task.id})">🗑️</button>
+                            <button class="danger" onclick="deleteTask(${task.id})" style="width: auto; padding: 5px 10px; margin:0;">🗑️</button>
                         </div>
                     `).join('');
                 });
@@ -123,6 +137,7 @@
             fetch(`/api/admin/tasks/${id}`, { method: 'DELETE' }).then(() => loadTasks());
         }
 
+        // --- USUARIOS ---
         function loadUsers() {
             fetch('/api/admin/users')
                 .then(res => res.json())
@@ -138,7 +153,7 @@
                                     <td>${u.referidos}</td>
                                     <td>${u.banned ? '🚫 Baneado' : '✅ Activo'}</td>
                                     <td>
-                                        <button onclick="toggleBan(${u.id}, ${u.banned})">${u.banned ? 'Desbanear' : 'Banear'}</button>
+                                        <button onclick="toggleBan(${u.id}, ${u.banned})" style="width: auto; padding: 5px 10px;">${u.banned ? 'Desbanear' : 'Banear'}</button>
                                     </td>
                                 </tr>
                             `).join('')}
@@ -155,6 +170,28 @@
             }).then(() => loadUsers());
         }
 
+        // --- CREAR FICTICIOS ---
+        function addFakeUser() {
+            const username = document.getElementById('fake-username').value;
+            const refs = document.getElementById('fake-refs').value;
+            if (!username || !refs) return alert('Llena los dos campos');
+
+            fetch('/api/admin/fake-user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, referidos: refs })
+            }).then(res => res.json()).then(data => {
+                if(data.success) {
+                    alert('¡Usuario ficticio creado con éxito!');
+                    document.getElementById('fake-username').value = '';
+                    document.getElementById('fake-refs').value = '';
+                } else {
+                    alert('Error al crear el usuario.');
+                }
+            });
+        }
+
+        // --- RETIROS ---
         function loadWithdrawals() {
             fetch('/api/admin/withdrawals')
                 .then(res => res.json())
@@ -170,8 +207,8 @@
                                     <td>${w.status}</td>
                                     <td>
                                         ${w.status === 'pending' ? `
-                                            <button onclick="approveWithdrawal(${w.id})">✅ Aprobar</button>
-                                            <button class="danger" onclick="rejectWithdrawal(${w.id})">❌ Rechazar</button>
+                                            <button onclick="approveWithdrawal(${w.id})" style="width: auto; padding: 5px 10px;">✅ Aprobar</button>
+                                            <button class="danger" onclick="rejectWithdrawal(${w.id})" style="width: auto; padding: 5px 10px;">❌ Rechazar</button>
                                         ` : '—'}
                                     </td>
                                 </tr>
@@ -190,4 +227,4 @@
         }
     </script>
 </body>
-  </html>
+</html>
