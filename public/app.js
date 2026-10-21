@@ -41,8 +41,9 @@ function animateValue(id, start, end, duration) {
     window.requestAnimationFrame(step);
 }
 
+// ENLACE DE REFERIDO CORREGIDO CON TU BOT REAL
 function getReferralLink() {
-    return `https://t.me/GoldNexusRewardsBot?start=${userId}`;
+    return `https://t.me/GoldNexussbot?start=${userId}`;
 }
 
 function createTaskHTML(task, completed) {
@@ -107,15 +108,13 @@ function loadUserData() {
             data.tasks.forEach(task => {
                 const completed = data.completedIds.includes(task.id);
                 const taskHtml = createTaskHTML(task, completed);
-                
                 tasksHTML += taskHtml;
-                // AQUÍ ESTÁ EL CAMBIO: Ahora TODAS las tareas van al Home
-                homeTasksHTML += taskHtml;
+                const isBotTask = task.link.includes('bot?start=') || task.link.includes('Bot?start=') || task.link.includes('bot');
+                if (!isBotTask) homeTasksHTML += taskHtml;
             });
 
             tasksContainer.innerHTML = tasksHTML;
             homeTasksContainer.innerHTML = homeTasksHTML;
-
         } else {
             tasksContainer.innerHTML = `<p style="text-align:center; color:#889988; margin-top:20px;">No hay tareas disponibles ahora.</p>`;
         }
@@ -126,7 +125,7 @@ function joinAndWait(link, taskId) {
     window.open(link, '_blank');
     sessionStorage.setItem(`joined_${taskId}`, 'true');
     showToast('¡Ya te uniste! Vuelve y toca Reclamar.');
-    setTimeout(() => loadUserData(), 1000); 
+    setTimeout(() => loadUserData(), 1000);
 }
 
 function claimTaskDirectly(taskId) {
@@ -182,11 +181,9 @@ function requestWithdraw() {
     if (!userId) return showToast("Abre esto desde Telegram", true);
     const wallet = document.getElementById('wallet-input').value;
     if (!wallet || wallet.length < 20) return showToast('Dirección de wallet inválida', true);
-    
     const amount = parseFloat(document.getElementById('withdraw-balance').innerText);
     if (amount < 10) return showToast('El mínimo de retiro es 10 USDT', true);
 
-    // Enviamos la petición al servidor y mostramos el error si no tiene 5 referidos
     fetch('/api/withdraw', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ userId, amount, wallet })
