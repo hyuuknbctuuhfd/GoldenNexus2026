@@ -18,8 +18,9 @@
         th { color: #889988; }
         .tab { display: none; }
         .tab.active { display: block; }
-        .tabs button { background: #1a251a; color: #fff; margin-right: 5px; width: auto; padding: 10px 20px;}
+        .tabs button { background: #1a251a; color: #fff; margin-right: 5px; width: auto;}
         .tabs button.active { background: #00ff88; color: #000; }
+        .btn-small { width: auto; padding: 5px 10px; font-size: 11px; margin: 2px; }
     </style>
 </head>
 <body>
@@ -34,15 +35,16 @@
         <div id="admin-panel" style="display: none;">
             <div class="tabs">
                 <button class="active" onclick="showTab('tasks')">Tareas</button>
+                <button onclick="showTab('stats')">Estadísticas</button>
                 <button onclick="showTab('users')">Usuarios</button>
-                <button onclick="showTab('fake')">Crear Ficticios</button>
+                <button onclick="showTab('fake')">Ficticios</button>
                 <button onclick="showTab('withdrawals')">Retiros</button>
             </div>
 
             <!-- PESTAÑA TAREAS -->
             <div id="tab-tasks" class="tab active">
                 <h2>Agregar Tarea</h2>
-                <input type="text" id="task-title" placeholder="Nombre de la tarea (ej. Unirse al Canal)">
+                <input type="text" id="task-title" placeholder="Nombre de la tarea">
                 <input type="text" id="task-link" placeholder="Enlace (https://t.me/... o bot?start=...)">
                 <input type="number" id="task-reward" placeholder="Recompensa USDT" step="0.01" value="1.00">
                 <button onclick="addTask()">➕ Agregar Tarea</button>
@@ -50,18 +52,23 @@
                 <div id="tasks-list"></div>
             </div>
 
-            <!-- PESTAÑA USUARIOS -->
+            <!-- PESTAÑA ESTADÍSTICAS -->
+            <div id="tab-stats" class="tab">
+                <h2>Rendimiento de Tareas</h2>
+                <div id="stats-list"></div>
+            </div>
+
+            <!-- PESTAÑA USUARIOS REALES -->
             <div id="tab-users" class="tab">
-                <h2>Usuarios Reales</h2>
+                <h2>Gestionar Usuarios</h2>
                 <div id="users-list"></div>
             </div>
 
             <!-- PESTAÑA CREAR FICTICIOS -->
             <div id="tab-fake" class="tab">
                 <h2>Crear Usuario Ficticio</h2>
-                <p style="color: #889988; font-size: 12px; margin-bottom: 15px;">Añade usuarios al ranking para motivar a los reales.</p>
                 <input type="text" id="fake-username" placeholder="Nombre del usuario (ej. CryptoKing)">
-                <input type="number" id="fake-refs" placeholder="Cantidad de Referidos (ej. 20)">
+                <input type="number" id="fake-refs" placeholder="Cantidad de Referidos">
                 <button onclick="addFakeUser()">➕ Crear Usuario Ficticio</button>
             </div>
 
@@ -91,6 +98,7 @@
                     loadTasks();
                     loadUsers();
                     loadWithdrawals();
+                    loadStats();
                 } else {
                     alert('Contraseña incorrecta');
                 }
@@ -110,9 +118,9 @@
                 .then(res => res.json())
                 .then(data => {
                     document.getElementById('tasks-list').innerHTML = data.map(task => `
-                        <div style="display: flex; justify-content: space-between; padding: 10px; background: #0a0e0a; border-radius: 8px; margin-bottom: 5px; align-items: center;">
+                        <div style="display: flex; justify-content: space-between; padding: 10px; background: #0a0e0a; border-radius: 8px; margin-bottom: 5px;">
                             <span>${task.title} - ${task.reward} USDT</span>
-                            <button class="danger" onclick="deleteTask(${task.id})" style="width: auto; padding: 5px 10px; margin:0;">🗑️</button>
+                            <button class="danger btn-small" onclick="deleteTask(${task.id})">🗑️</button>
                         </div>
                     `).join('');
                 });
@@ -128,32 +136,54 @@
                 body: JSON.stringify({ title, link, reward })
             }).then(() => {
                 loadTasks();
+                loadStats();
                 document.getElementById('task-title').value = '';
                 document.getElementById('task-link').value = '';
             });
         }
 
         function deleteTask(id) {
-            fetch(`/api/admin/tasks/${id}`, { method: 'DELETE' }).then(() => loadTasks());
+            fetch(`/api/admin/tasks/${id}`, { method: 'DELETE' }).then(() => { loadTasks(); loadStats(); });
         }
 
-        // --- USUARIOS ---
+        // --- ESTADÍSTICAS ---
+        function loadStats() {
+            fetch('/api/admin/stats')
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('stats-list').innerHTML = `
+                        <table>
+                            <tr><th>Tarea</th><th>Recompensa</th><th>Completados</th></tr>
+                            ${data.map(s => `
+                                <tr>
+                                    <td>${s.title}</td>
+                                    <td>${s.reward} USDT</td>
+                                    <td style="color: #00ff88; font-weight: bold; font-size: 14px;">${s.completados}</td>
+                                </tr>
+                            `).join('')}
+                        </table>
+                    `;
+                });
+        }
+
+        // --- USUARIOS REALES CON BOTONES DE SALDO Y REFS ---
         function loadUsers() {
             fetch('/api/admin/users')
                 .then(res => res.json())
                 .then(data => {
                     document.getElementById('users-list').innerHTML = `
                         <table>
-                            <tr><th>ID</th><th>Usuario</th><th>Saldo</th><th>Refs</th><th>Estado</th><th>Acción</th></tr>
+                            <tr><th>ID</th><th>Usuario</th><th>Saldo</th><th>Refs</th><th>Acciones</th></tr>
                             ${data.map(u => `
                                 <tr>
                                     <td>${u.id}</td>
                                     <td>${u.username}</td>
                                     <td>${u.balance.toFixed(2)}</td>
                                     <td>${u.referidos}</td>
-                                    <td>${u.banned ? '🚫 Baneado' : '✅ Activo'}</td>
                                     <td>
-                                        <button onclick="toggleBan(${u.id}, ${u.banned})" style="width: auto; padding: 5px 10px;">${u.banned ? 'Desbanear' : 'Banear'}</button>
+                                        <button class="btn-small" onclick="addBalance(${u.id})">+Saldo</button>
+                                        <button class="btn-small" onclick="addRefs(${u.id})">+Refs</button>
+                                        <button class="btn-small danger" onclick="toggleBan(${u.id}, ${u.banned})">${u.banned ? 'Desbanear' : 'Banear'}</button>
                                     </td>
                                 </tr>
                             `).join('')}
@@ -162,10 +192,27 @@
                 });
         }
 
+        function addBalance(userId) {
+            const amount = parseFloat(prompt("¿Cuánto saldo deseas añadir?"));
+            if (!amount || amount <= 0) return;
+            fetch('/api/admin/add-balance', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId, amount })
+            }).then(() => loadUsers());
+        }
+
+        function addRefs(userId) {
+            const amount = parseInt(prompt("¿Cuántos referidos deseas añadir?"));
+            if (!amount || amount <= 0) return;
+            fetch('/api/admin/add-refs', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId, amount })
+            }).then(() => loadUsers());
+        }
+
         function toggleBan(userId, banned) {
             fetch(`/api/admin/ban/${userId}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ banned: banned ? 0 : 1 })
             }).then(() => loadUsers());
         }
@@ -177,16 +224,13 @@
             if (!username || !refs) return alert('Llena los dos campos');
 
             fetch('/api/admin/fake-user', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ username, referidos: refs })
             }).then(res => res.json()).then(data => {
                 if(data.success) {
-                    alert('¡Usuario ficticio creado con éxito!');
+                    alert('¡Usuario ficticio creado!');
                     document.getElementById('fake-username').value = '';
                     document.getElementById('fake-refs').value = '';
-                } else {
-                    alert('Error al crear el usuario.');
                 }
             });
         }
@@ -207,8 +251,8 @@
                                     <td>${w.status}</td>
                                     <td>
                                         ${w.status === 'pending' ? `
-                                            <button onclick="approveWithdrawal(${w.id})" style="width: auto; padding: 5px 10px;">✅ Aprobar</button>
-                                            <button class="danger" onclick="rejectWithdrawal(${w.id})" style="width: auto; padding: 5px 10px;">❌ Rechazar</button>
+                                            <button class="btn-small" onclick="approveWithdrawal(${w.id})">✅</button>
+                                            <button class="btn-small danger" onclick="rejectWithdrawal(${w.id})">❌</button>
                                         ` : '—'}
                                     </td>
                                 </tr>
