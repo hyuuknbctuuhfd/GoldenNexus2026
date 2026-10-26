@@ -13,20 +13,18 @@ app.use(express.json());
 app.use(express.static('public'));
 app.use('/admin', express.static('admin'));
 
-// ==================== LÓGICA DEL CAPITAL (NUEVA) ====================
-// Creamos la tabla para guardar el capital si no existe
+// ==================== LÓGICA DEL CAPITAL (PERSISTENTE) ====================
 db.run(`CREATE TABLE IF NOT EXISTS project_config (
     id INTEGER PRIMARY KEY,
     capital_restante REAL,
     ultima_actualizacion INTEGER
 )`);
 
-// Configuración del capital
 const CAPITAL_INICIAL = 750000;
 const CAPITAL_POR_HORA = 1000; 
 const CAPITAL_POR_MS = CAPITAL_POR_HORA / (60 * 60 * 1000);
 
-// Inicializar la tabla la primera vez
+// Inicializar la tabla
 db.get(`SELECT * FROM project_config WHERE id = 1`, [], (err, row) => {
     if (!row) {
         db.run(`INSERT INTO project_config (id, capital_restante, ultima_actualizacion) VALUES (1, ?, ?)`, 
@@ -34,7 +32,6 @@ db.get(`SELECT * FROM project_config WHERE id = 1`, [], (err, row) => {
     }
 });
 
-// Ruta para obtener el capital actual
 app.get('/api/capital', (req, res) => {
     db.get(`SELECT * FROM project_config WHERE id = 1`, [], (err, row) => {
         if (err || !row) return res.json({ capital: CAPITAL_INICIAL });
@@ -42,11 +39,9 @@ app.get('/api/capital', (req, res) => {
         const ahora = Date.now();
         const tiempoTranscurrido = ahora - row.ultima_actualizacion;
         
-        // Calculamos cuánto ha bajado desde la última vez
         let nuevoCapital = row.capital_restante - (tiempoTranscurrido * CAPITAL_POR_MS);
         if (nuevoCapital < 0) nuevoCapital = 0;
         
-        // Guardamos el nuevo valor en la base de datos
         db.run(`UPDATE project_config SET capital_restante = ?, ultima_actualizacion = ? WHERE id = 1`, 
         [nuevoCapital, ahora]);
         
@@ -85,6 +80,7 @@ app.get('/api/tasks/:userId', (req, res) => {
     });
 });
 
+// Pago directo sin verificar
 app.post('/api/claim-task', (req, res) => {
     const { userId, taskId } = req.body;
     db.get(`SELECT * FROM tasks WHERE id = ? AND active = 1`, [taskId], (err, task) => {
@@ -95,6 +91,7 @@ app.post('/api/claim-task', (req, res) => {
             db.run(`INSERT INTO completed_tasks (user_id, task_id) VALUES (?, ?)`, [userId, taskId]);
             db.run(`UPDATE users SET balance = balance + ? WHERE id = ?`, [task.reward, userId]);
             
+            // Bono de 3 tareas
             db.get(`SELECT referidor_id FROM users WHERE id = ?`, [userId], (err, user) => {
                 if (user && user.referidor_id) {
                     db.get(`SELECT COUNT(*) as total FROM completed_tasks WHERE user_id = ?`, [userId], (err, count) => {
@@ -205,9 +202,22 @@ app.get('/api/admin/tasks', (req, res) => {
     db.all(`SELECT * FROM tasks`, [], (err, rows) => res.json(rows));
 });
 
+// RUTA CORREGIDA PARA AGREGAR TAREAS
 app.post('/api/admin/tasks', (req, res) => {
-    db.run(`INSERT INTO tasks (title, link, reward, type) VALUES (?, ?, ?, ?)`, [req.body.title, req.body.link, req.body.reward, req.body.type || 'channel']);
-    res.json({ success: true });
+    const { title, link, reward, type } = req.body;
+    
+    if (!title || !link) {
+        return res.status(400).json({ error: 'El título y el enlace son obligatorios' });
+    }
+
+    db.run(`INSERT INTO tasks (title, link, reward, type) VALUES (?, ?, ?, ?)`, 
+    [title, link, reward, type || 'channel'], (err) => {
+        if (err) {
+            console.error("Error al guardar tarea:", err);
+            return res.status(500).json({ error: 'Error interno al guardar la tarea' });
+        }
+        res.json({ success: true, message: 'Tarea creada con éxito' });
+    });
 });
 
 app.delete('/api/admin/tasks/:id', (req, res) => {
