@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GoldNexus Admin</title>
+    <title>PayNex Admin</title>
     <style>
         body { background: #050805; color: #fff; font-family: sans-serif; padding: 20px; }
         .container { max-width: 900px; margin: 0 auto; background: #111811; padding: 20px; border-radius: 12px; border: 1px solid #1a251a; }
         h1 { color: #ffd700; margin-bottom: 20px; }
         h2 { color: #00ff88; margin: 20px 0 10px; }
-        input, button, select { padding: 10px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #1a251a; background: #0a0e0a; color: #fff; width: 100%; box-sizing: border-box;}
+        input, button, select, textarea { padding: 10px; margin-bottom: 10px; border-radius: 8px; border: 1px solid #1a251a; background: #0a0e0a; color: #fff; width: 100%; box-sizing: border-box;}
         button { background: #00ff88; color: #000; font-weight: bold; cursor: pointer; border: none; }
         button:hover { background: #00cc6a; }
         button.danger { background: #ff4444; color: #fff; }
@@ -21,11 +21,17 @@
         .tabs button { background: #1a251a; color: #fff; margin-right: 5px; width: auto;}
         .tabs button.active { background: #00ff88; color: #000; }
         .btn-small { width: auto; padding: 5px 10px; font-size: 11px; margin: 2px; }
+        
+        /* NUEVO: Estilos para los contadores */
+        .stats-grid { display: flex; gap: 15px; margin-bottom: 20px; }
+        .stat-card { flex: 1; background: #0a0e0a; padding: 20px; border-radius: 8px; text-align: center; border: 1px solid #00ff88; }
+        .stat-card h3 { color: #889988; font-size: 14px; margin-bottom: 5px; }
+        .stat-card span { font-size: 28px; font-weight: bold; color: #00ff88; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>⚙️ GoldNexus Admin Panel</h1>
+        <h1>⚙️ PayNex Admin Panel</h1>
         
         <div id="login-section">
             <input type="password" id="admin-password" placeholder="Contraseña de administrador">
@@ -39,6 +45,7 @@
                 <button onclick="showTab('users')">Usuarios</button>
                 <button onclick="showTab('fake')">Ficticios</button>
                 <button onclick="showTab('withdrawals')">Retiros</button>
+                <button onclick="showTab('broadcast')">Broadcast</button>
             </div>
 
             <!-- PESTAÑA TAREAS -->
@@ -46,14 +53,29 @@
                 <h2>Agregar Tarea</h2>
                 <input type="text" id="task-title" placeholder="Nombre de la tarea">
                 <input type="text" id="task-link" placeholder="Enlace (https://t.me/... o bot?start=...)">
-                <input type="number" id="task-reward" placeholder="Recompensa USDT" step="0.01" value="1.00">
+                <input type="number" id="task-reward" placeholder="Recompensa USDT" step="0.01" value="0.50">
+                <select id="task-type">
+                    <option value="channel">Unirse a Canal (0.50 USDT)</option>
+                    <option value="bot">Unirse a Bot (1.20 USDT)</option>
+                </select>
                 <button onclick="addTask()">➕ Agregar Tarea</button>
                 <h2>Tareas Activas</h2>
                 <div id="tasks-list"></div>
             </div>
 
-            <!-- PESTAÑA ESTADÍSTICAS -->
+            <!-- PESTAÑA ESTADÍSTICAS (CON CONTADOR DE USUARIOS) -->
             <div id="tab-stats" class="tab">
+                <h2>Resumen de la Comunidad</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h3>Usuarios Totales</h3>
+                        <span id="total-users">0</span>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Usuarios Activos (Con Refs)</h3>
+                        <span id="active-users">0</span>
+                    </div>
+                </div>
                 <h2>Rendimiento de Tareas</h2>
                 <div id="stats-list"></div>
             </div>
@@ -76,6 +98,23 @@
             <div id="tab-withdrawals" class="tab">
                 <h2>Solicitudes de Retiro</h2>
                 <div id="withdrawals-list"></div>
+            </div>
+
+            <!-- PESTAÑA BROADCAST (NUEVA) -->
+            <div id="tab-broadcast" class="tab">
+                <h2>Enviar Mensaje a Todos</h2>
+                <p style="color: #889988; font-size: 12px; margin-bottom: 15px;">Envía un mensaje con foto y botón directo al chat de todos los usuarios.</p>
+                
+                <input type="text" id="broadcast-image" placeholder="URL de la imagen publicitaria (debe terminar en .jpg o .png)">
+                
+                <textarea id="broadcast-msg" placeholder="Escribe el mensaje aquí... (Acepta HTML como <b>negrita</b>)" rows="4"></textarea>
+                
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="broadcast-btn-text" placeholder="Texto del botón (ej. 🚀 Unirse al Nuevo Bot)" style="flex: 1;">
+                    <input type="text" id="broadcast-btn-url" placeholder="URL del botón (ej. https://t.me/TuNuevoBot)" style="flex: 1;">
+                </div>
+
+                <button onclick="sendBroadcast()">📢 Enviar Mensaje Masivo</button>
             </div>
         </div>
     </div>
@@ -130,10 +169,11 @@
             const title = document.getElementById('task-title').value;
             const link = document.getElementById('task-link').value;
             const reward = document.getElementById('task-reward').value;
+            const type = document.getElementById('task-type').value;
             fetch('/api/admin/tasks', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ title, link, reward })
+                body: JSON.stringify({ title, link, reward, type })
             }).then(() => {
                 loadTasks();
                 loadStats();
@@ -146,8 +186,18 @@
             fetch(`/api/admin/tasks/${id}`, { method: 'DELETE' }).then(() => { loadTasks(); loadStats(); });
         }
 
-        // --- ESTADÍSTICAS ---
+        // --- ESTADÍSTICAS (NUEVO CONTADOR) ---
         function loadStats() {
+            // Cargar contador de usuarios
+            fetch('/api/admin/users')
+                .then(res => res.json())
+                .then(data => {
+                    document.getElementById('total-users').innerText = data.length;
+                    const activeUsers = data.filter(u => u.referidos > 0).length;
+                    document.getElementById('active-users').innerText = activeUsers;
+                });
+
+            // Cargar rendimiento de tareas
             fetch('/api/admin/stats')
                 .then(res => res.json())
                 .then(data => {
@@ -166,7 +216,7 @@
                 });
         }
 
-        // --- USUARIOS REALES CON BOTONES DE SALDO Y REFS ---
+        // --- USUARIOS REALES ---
         function loadUsers() {
             fetch('/api/admin/users')
                 .then(res => res.json())
@@ -242,12 +292,13 @@
                 .then(data => {
                     document.getElementById('withdrawals-list').innerHTML = `
                         <table>
-                            <tr><th>Usuario</th><th>Monto</th><th>Wallet</th><th>Estado</th><th>Acción</th></tr>
+                            <tr><th>Usuario</th><th>Monto</th><th>Wallet</th><th>Red</th><th>Estado</th><th>Acción</th></tr>
                             ${data.map(w => `
                                 <tr>
                                     <td>${w.username}</td>
                                     <td>${w.amount} USDT</td>
                                     <td>${w.wallet}</td>
+                                    <td>${w.network || 'N/A'}</td>
                                     <td>${w.status}</td>
                                     <td>
                                         ${w.status === 'pending' ? `
@@ -269,6 +320,28 @@
         function rejectWithdrawal(id) {
             fetch(`/api/admin/withdrawals/${id}/reject`, { method: 'POST' }).then(() => loadWithdrawals());
         }
+
+        // --- BROADCAST (NUEVA FUNCIÓN) ---
+        function sendBroadcast() {
+            const message = document.getElementById('broadcast-msg').value;
+            const imageUrl = document.getElementById('broadcast-image').value;
+            const buttonText = document.getElementById('broadcast-btn-text').value;
+            const buttonUrl = document.getElementById('broadcast-btn-url').value;
+
+            if (!message && !imageUrl) return alert('Escribe un mensaje o pon una imagen');
+            if (!confirm('¿Seguro que quieres enviar este mensaje a TODOS los usuarios?')) return;
+
+            fetch('/api/admin/broadcast', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message, imageUrl, buttonText, buttonUrl })
+            }).then(res => res.json()).then(data => {
+                alert(data.message || data.error);
+                if (data.success) {
+                    document.getElementById('broadcast-msg').value = '';
+                    document.getElementById('broadcast-image').value = '';
+                }
+            });
+        }
     </script>
 </body>
-</html>
+                        </html>
