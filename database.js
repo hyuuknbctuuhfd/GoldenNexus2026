@@ -23,15 +23,18 @@ db.serialize(() => {
         referidor_id INTEGER,
         language TEXT DEFAULT 'es',
         wallet TEXT,
+        network TEXT,
         banned INTEGER DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )`);
 
+    // AÑADIDO: Columna 'type' para saber si es canal o bot
     db.run(`CREATE TABLE IF NOT EXISTS tasks (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         title TEXT,
         link TEXT,
         reward REAL,
+        type TEXT DEFAULT 'channel',
         active INTEGER DEFAULT 1
     )`);
 
@@ -43,11 +46,13 @@ db.serialize(() => {
         UNIQUE(user_id, task_id)
     )`);
 
+    // AÑADIDO: Columna 'network' para guardar la red (BEP20, TRC20, etc.)
     db.run(`CREATE TABLE IF NOT EXISTS withdrawals (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER,
         amount REAL,
         wallet TEXT,
+        network TEXT,
         status TEXT DEFAULT 'pending',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
         processed_at DATETIME
@@ -58,6 +63,13 @@ db.serialize(() => {
         user_id INTEGER,
         date TEXT,
         UNIQUE(user_id, date)
+    )`);
+
+    // Tabla para el capital del proyecto
+    db.run(`CREATE TABLE IF NOT EXISTS project_config (
+        id INTEGER PRIMARY KEY,
+        capital_restante REAL,
+        ultima_actualizacion INTEGER
     )`);
 });
 
