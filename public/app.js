@@ -8,37 +8,30 @@ const MEGAFONO_ICON = "https://raw.githubusercontent.com/hyuuknbctuuhfd/GoldenNe
 // --- NOMBRES FALSOS PARA LOS MENSAJES DE RETIRO ---
 const fakeUsers = ["@CryptoKing_99", "@MariaCrypto", "@Elon_Fan", "@AirdropHunter", "@TonMaster", "@Faraon_Pro", "@GoldDigger", "@BTC_Lover", "@SandWalker", "@NileTrader", "@Scarab_777", "@PyramidX", "@Anubis_Rich", "@Cleopatra_VIP", "@Osiris_Earn", "@Crypto_Advisor", "@Satoshi_Fan", "@Ethereum_Whale", "@USDT_Master", "@Binance_Pro", "@Telegram_Earner", "@Lucky_User", "@Web3_Gamer", "@NFT_Collector", "@DeFi_King", "@CryptoNinja", "@MoonBoy", "@HODLer_2024", "@Altcoin_Hunter", "@Blockchain_Bro", "@Smart_Trader", "@Crypto_Guru", "@Earn_Daily", "@Passive_Income", "@Micro_Task_Pro", "@Cash_Hunter", "@Gold_Rush", "@Token_Whale", "@Satoshi_Nakamoto", "@Vitalik_Fan", "@Crypto_Wolf", "@Falcon_Trade", "@Bull_Market", "@Cobra_Coin", "@Lion_Heart", "@Eagle_Eye", "@Tiger_Trade", "@Shark_Invest", "@Dragon_Crypto", "@Phoenix_Rise", "@Alpha_Wolf", "@Beta_Tester"];
 
-// --- LÓGICA DE LA BARRA DE CAPITAL (750,000 USDT) ---
+// --- LÓGICA DE LA BARRA DE CAPITAL (Conectada al Servidor) ---
 const totalCapital = 750000;
-const capitalPerHour = 1000; 
-const capitalPerSecond = capitalPerHour / 3600;
 
-// Fijamos una fecha de inicio en el pasado para que ya se vea movimiento
-const startDate = new Date();
-startDate.setHours(startDate.getHours() - 5); // Simula que empezó hace 5 horas
-const startTime = startDate.getTime();
-
-function updateCapital() {
-    const capitalEl = document.getElementById('capital-amount');
-    const fillEl = document.getElementById('capital-fill');
-    
-    if (capitalEl && fillEl) {
-        const ahora = new Date();
-        const horaActual = ahora.getHours(); 
-        const estaActivo = (horaActual >= 8 && horaActual <= 23); // Baja solo de 8 AM a 11 PM
+async function updateCapital() {
+    try {
+        // Pedimos el capital real al servidor (que calcula el tiempo transcurrido)
+        const res = await fetch('/api/capital');
+        const data = await res.json();
         
-        const tiempoTranscurridoMs = Date.now() - startTime;
+        let currentVal = data.capital || 0;
         
-        // El capital baja constantemente (simulando que el proyecto gasta dinero)
-        let currentVal = totalCapital - ((tiempoTranscurridoMs / 1000) * capitalPerSecond);
+        const capitalEl = document.getElementById('capital-amount');
+        const fillEl = document.getElementById('capital-fill');
         
-        if (currentVal < 0) currentVal = 0;
-        
-        capitalEl.innerText = Math.floor(currentVal).toLocaleString('en-US') + ' USDT';
-        fillEl.style.width = ((currentVal / totalCapital) * 100) + '%';
+        if (capitalEl && fillEl) {
+            capitalEl.innerText = Math.floor(currentVal).toLocaleString('en-US') + ' USDT';
+            fillEl.style.width = ((currentVal / totalCapital) * 100) + '%';
+        }
+    } catch (e) {
+        console.log("Error cargando capital:", e);
     }
     
-    setTimeout(updateCapital, 1000);
+    // Se actualiza cada 5 segundos para no saturar el servidor
+    setTimeout(updateCapital, 5000);
 }
 updateCapital();
 
@@ -153,7 +146,7 @@ function loadUserData() {
         document.getElementById('total-refs').innerText = data.referidos || 0;
         document.getElementById('total-earned').innerText = ((data.referidos || 0) * 1.5).toFixed(2) + ' USDT';
 
-        // BLINDAJE DEL AVISO DE 24 HORAS (Sin importar la hora del servidor)
+        // BLINDAJE DEL AVISO DE 24 HORAS
         const fechaRegistro = new Date(data.created_at).getTime();
         const ahora = new Date().getTime();
         const horasTranscurridas = (ahora - fechaRegistro) / (1000 * 60 * 60);
