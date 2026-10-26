@@ -5,6 +5,56 @@ const userId = tg.initDataUnsafe?.user?.id;
 const ROBOT_ICON = "https://raw.githubusercontent.com/hyuuknbctuuhfd/GoldenNexus2026/main/public/robot.png";
 const MEGAFONO_ICON = "https://raw.githubusercontent.com/hyuuknbctuuhfd/GoldenNexus2026/main/public/megafono.png";
 
+// --- NOMBRES FALSOS PARA LOS MENSAJES DE RETIRO ---
+const fakeUsers = ["@CryptoKing_99", "@MariaCrypto", "@Elon_Fan", "@AirdropHunter", "@TonMaster", "@Faraon_Pro", "@GoldDigger", "@BTC_Lover", "@SandWalker", "@NileTrader", "@Scarab_777", "@PyramidX", "@Anubis_Rich", "@Cleopatra_VIP", "@Osiris_Earn", "@Crypto_Advisor", "@Satoshi_Fan", "@Ethereum_Whale", "@USDT_Master", "@Binance_Pro", "@Telegram_Earner", "@Lucky_User", "@Web3_Gamer", "@NFT_Collector", "@DeFi_King", "@CryptoNinja", "@MoonBoy", "@HODLer_2024", "@Altcoin_Hunter", "@Blockchain_Bro", "@Smart_Trader", "@Crypto_Guru", "@Earn_Daily", "@Passive_Income", "@Micro_Task_Pro", "@Cash_Hunter", "@Gold_Rush", "@Token_Whale", "@Satoshi_Nakamoto", "@Vitalik_Fan", "@Crypto_Wolf", "@Falcon_Trade", "@Bull_Market", "@Cobra_Coin", "@Lion_Heart", "@Eagle_Eye", "@Tiger_Trade", "@Shark_Invest", "@Dragon_Crypto", "@Phoenix_Rise", "@Alpha_Wolf", "@Beta_Tester"];
+
+// --- LÓGICA DE LA BARRA DE CAPITAL (Baja en 3 meses) ---
+let totalCapital = 200000;
+const capitalDuration = 90 * 24 * 60 * 60 * 1000; // 90 días
+const startTime = Date.now();
+const capitalPerMs = totalCapital / capitalDuration;
+
+function updateCapital() {
+    const elapsed = Date.now() - startTime;
+    let remaining = totalCapital - (elapsed * capitalPerMs);
+    if (remaining < 0) remaining = 0;
+    
+    const capitalEl = document.getElementById('capital-amount');
+    const fillEl = document.getElementById('capital-fill');
+    
+    if(capitalEl) capitalEl.innerText = Math.floor(remaining).toLocaleString('en-US') + ' USDT';
+    if(fillEl) fillEl.style.width = ((remaining / totalCapital) * 100) + '%';
+    
+    requestAnimationFrame(updateCapital);
+}
+updateCapital();
+
+// --- MENSAJES FLOTANTES DE RETIRO CADA 30 SEGUNDOS ---
+function showFakeWithdrawal() {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+    
+    const randomUser = fakeUsers[Math.floor(Math.random() * fakeUsers.length)];
+    const randomAmount = (Math.random() * (50 - 10) + 10).toFixed(2);
+    
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.innerHTML = `💸 Retiro exitoso para <b>${randomUser}</b> por <b>${randomAmount} USDT</b>`;
+    
+    container.appendChild(toast);
+    
+    setTimeout(() => {
+        if (toast.parentNode) toast.remove();
+    }, 4500);
+}
+
+setTimeout(() => {
+    showFakeWithdrawal();
+    setInterval(showFakeWithdrawal, 30000); // Cada 30 segundos
+}, 5000);
+
+
+// --- FUNCIONES BASE ---
 function showToast(message, isError = false) {
     const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
@@ -43,7 +93,7 @@ function animateValue(id, start, end, duration) {
 
 // ENLACE DE REFERIDO CORREGIDO CON TU BOT REAL
 function getReferralLink() {
-    return `https://t.me/GoldNexussbot?start=${userId}`;
+    return `https://t.me/Paynexs_bot?start=${userId}`;
 }
 
 function createTaskHTML(task, completed) {
@@ -81,13 +131,32 @@ function loadUserData() {
     if (!userId) return;
     
     fetch(`/api/user/${userId}`).then(res => res.json()).then(data => {
-        animateValue('balance', 0, data.balance, 1500);
-        document.getElementById('withdraw-balance').innerText = data.balance.toFixed(2);
-        const receiveAmount = Math.max(0, data.balance); 
+        // ARREGLO DEL NaN
+        const safeBalance = (data && data.balance !== undefined && data.balance !== null) ? data.balance : 0.00;
+        
+        animateValue('balance', 0, safeBalance, 1500);
+        document.getElementById('withdraw-balance').innerText = safeBalance.toFixed(2);
+        const receiveAmount = Math.max(0, safeBalance); 
         document.getElementById('receive-amount').innerText = receiveAmount.toFixed(2) + ' USDT';
         document.getElementById('ref-link-text').innerText = getReferralLink();
         document.getElementById('total-refs').innerText = data.referidos;
         document.getElementById('total-earned').innerText = (data.referidos * 1.5).toFixed(2) + ' USDT';
+
+        // AVISO DE 24 HORAS
+        const fechaRegistro = new Date(data.created_at).getTime();
+        const ahora = new Date().getTime();
+        const horasTranscurridas = (ahora - fechaRegistro) / (1000 * 60 * 60);
+        const warningDiv = document.getElementById('withdraw-warning');
+        if (warningDiv) {
+            if (horasTranscurridas < 24) {
+                const horasRestantes = Math.ceil(24 - horasTranscurridas);
+                warningDiv.style.display = 'block';
+                warningDiv.innerHTML = `⏳ <b>Cuenta nueva:</b> Podrás retirar en <b>${horasRestantes} horas</b>.`;
+            } else { 
+                warningDiv.style.display = 'none'; 
+            }
+        }
+
     }).catch(err => console.log(err));
     
     fetch('/api/ranking').then(res => res.json()).then(data => {
@@ -149,7 +218,7 @@ function copyLink() {
 }
 
 function shareTelegram() {
-    const text = encodeURIComponent("¡Únete a GoldNexus y gana USDT por completar tareas! 🚀");
+    const text = encodeURIComponent("🔥 Bro, estoy ganando USDT como nunca con este bot. Únete con mi enlace antes de que se acabe el capital:");
     const url = encodeURIComponent(getReferralLink());
     window.open(`https://t.me/share/url?url=${url}&text=${text}`, '_blank');
 }
@@ -157,7 +226,7 @@ function shareTelegram() {
 function shareGeneral() {
     if (navigator.share) {
         navigator.share({
-            title: 'GoldNexus Rewards',
+            title: 'PayNex Rewards',
             text: '¡Únete y gana USDT!',
             url: getReferralLink(),
         }).catch(console.error);
@@ -177,6 +246,14 @@ document.getElementById('checkin-btn').addEventListener('click', () => {
     });
 });
 
+// --- LÓGICA DE RETIRO CON REDES ---
+let selectedNetwork = 'BEP20';
+function selectNetwork(network, btnElement) {
+    selectedNetwork = network;
+    document.querySelectorAll('.network-btn').forEach(btn => btn.classList.remove('active'));
+    btnElement.classList.add('active');
+}
+
 function requestWithdraw() {
     if (!userId) return showToast("Abre esto desde Telegram", true);
     const wallet = document.getElementById('wallet-input').value;
@@ -186,7 +263,7 @@ function requestWithdraw() {
 
     fetch('/api/withdraw', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, amount, wallet })
+        body: JSON.stringify({ userId, amount, wallet, network: selectedNetwork })
     }).then(res => res.json()).then(data => {
         showToast(data.message || data.error, !data.success);
         if (data.success) {
