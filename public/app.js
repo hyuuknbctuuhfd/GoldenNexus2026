@@ -5,40 +5,41 @@ const userId = tg.initDataUnsafe?.user?.id;
 const ROBOT_ICON = "https://raw.githubusercontent.com/hyuuknbctuuhfd/GoldenNexus2026/main/public/robot.png";
 const MEGAFONO_ICON = "https://raw.githubusercontent.com/hyuuknbctuuhfd/GoldenNexus2026/main/public/megafono.png";
 
-// --- NOMBRES FALSOS PARA LOS MENSAJES DE RETIRO ---
 const fakeUsers = ["@CryptoKing_99", "@MariaCrypto", "@Elon_Fan", "@AirdropHunter", "@TonMaster", "@Faraon_Pro", "@GoldDigger", "@BTC_Lover", "@SandWalker", "@NileTrader", "@Scarab_777", "@PyramidX", "@Anubis_Rich", "@Cleopatra_VIP", "@Osiris_Earn", "@Crypto_Advisor", "@Satoshi_Fan", "@Ethereum_Whale", "@USDT_Master", "@Binance_Pro", "@Telegram_Earner", "@Lucky_User", "@Web3_Gamer", "@NFT_Collector", "@DeFi_King", "@CryptoNinja", "@MoonBoy", "@HODLer_2024", "@Altcoin_Hunter", "@Blockchain_Bro", "@Smart_Trader", "@Crypto_Guru", "@Earn_Daily", "@Passive_Income", "@Micro_Task_Pro", "@Cash_Hunter", "@Gold_Rush", "@Token_Whale", "@Satoshi_Nakamoto", "@Vitalik_Fan", "@Crypto_Wolf", "@Falcon_Trade", "@Bull_Market", "@Cobra_Coin", "@Lion_Heart", "@Eagle_Eye", "@Tiger_Trade", "@Shark_Invest", "@Dragon_Crypto", "@Phoenix_Rise", "@Alpha_Wolf", "@Beta_Tester"];
 
-// --- LÓGICA DE LA BARRA DE CAPITAL (750,000 USDT - Dura ~2 meses) ---
-let totalCapital = 750000;
+// --- LÓGICA DE LA BARRA DE CAPITAL (750,000 USDT) ---
+const totalCapital = 750000;
 const capitalPerHour = 1000; 
 const capitalPerSecond = capitalPerHour / 3600;
+
+// Hora de inicio (simulamos que empezó hace 1 hora para que se vea movimiento)
+let currentCapital = totalCapital - (capitalPerHour * 1); 
+let lastUpdate = Date.now();
 
 function updateCapital() {
     const ahora = new Date();
     const horaActual = ahora.getHours(); 
-    
-    // Solo baja el capital entre las 8:00 AM y las 12:00 AM (medianoche)
     const estaActivo = (horaActual >= 8 && horaActual <= 23);
     
-    let capitalEl = document.getElementById('capital-amount');
-    let fillEl = document.getElementById('capital-fill');
+    const ahoraMs = Date.now();
+    const tiempoTranscurrido = (ahoraMs - lastUpdate) / 1000; // Segundos
+    lastUpdate = ahoraMs;
+
+    const capitalEl = document.getElementById('capital-amount');
+    const fillEl = document.getElementById('capital-fill');
     
     if (capitalEl && fillEl) {
-        let currentVal = parseFloat(capitalEl.innerText.replace(/,/g, '').replace(' USDT', ''));
-        if (isNaN(currentVal)) currentVal = totalCapital;
-
-        if (estaActivo && currentVal > 0) {
-            let newVal = currentVal - capitalPerSecond;
-            if (newVal < 0) newVal = 0;
+        if (estaActivo && currentCapital > 0) {
+            // Restamos el capital que corresponde a los segundos transcurridos
+            currentCapital -= (capitalPerSecond * tiempoTranscurrido);
+            if (currentCapital < 0) currentCapital = 0;
             
-            capitalEl.innerText = Math.floor(newVal).toLocaleString('en-US') + ' USDT';
-            fillEl.style.width = ((newVal / totalCapital) * 100) + '%';
-        } else {
-            capitalEl.innerText = Math.floor(currentVal).toLocaleString('en-US') + ' USDT';
-            fillEl.style.width = ((currentVal / totalCapital) * 100) + '%';
+            capitalEl.innerText = Math.floor(currentCapital).toLocaleString('en-US') + ' USDT';
+            fillEl.style.width = ((currentCapital / totalCapital) * 100) + '%';
         }
     }
     
+    // Repetir cada 1 segundo
     setTimeout(updateCapital, 1000);
 }
 updateCapital();
@@ -105,7 +106,6 @@ function animateValue(id, start, end, duration) {
     window.requestAnimationFrame(step);
 }
 
-// ENLACE DE REFERIDO CORREGIDO CON TU BOT REAL
 function getReferralLink() {
     return `https://t.me/Paynexs_bot?start=${userId}`;
 }
