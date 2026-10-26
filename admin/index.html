@@ -22,7 +22,6 @@
         .tabs button.active { background: #00ff88; color: #000; }
         .btn-small { width: auto; padding: 5px 10px; font-size: 11px; margin: 2px; }
         
-        /* NUEVO: Estilos para los contadores */
         .stats-grid { display: flex; gap: 15px; margin-bottom: 20px; }
         .stat-card { flex: 1; background: #0a0e0a; padding: 20px; border-radius: 8px; text-align: center; border: 1px solid #00ff88; }
         .stat-card h3 { color: #889988; font-size: 14px; margin-bottom: 5px; }
@@ -63,7 +62,7 @@
                 <div id="tasks-list"></div>
             </div>
 
-            <!-- PESTAÑA ESTADÍSTICAS (CON CONTADOR DE USUARIOS) -->
+            <!-- PESTAÑA ESTADÍSTICAS -->
             <div id="tab-stats" class="tab">
                 <h2>Resumen de la Comunidad</h2>
                 <div class="stats-grid">
@@ -100,7 +99,7 @@
                 <div id="withdrawals-list"></div>
             </div>
 
-            <!-- PESTAÑA BROADCAST (NUEVA) -->
+            <!-- PESTAÑA BROADCAST -->
             <div id="tab-broadcast" class="tab">
                 <h2>Enviar Mensaje a Todos</h2>
                 <p style="color: #889988; font-size: 12px; margin-bottom: 15px;">Envía un mensaje con foto y botón directo al chat de todos los usuarios.</p>
@@ -165,20 +164,37 @@
                 });
         }
 
+        // FUNCIÓN CORREGIDA: Ahora te avisa si hay un error
         function addTask() {
             const title = document.getElementById('task-title').value;
             const link = document.getElementById('task-link').value;
             const reward = document.getElementById('task-reward').value;
             const type = document.getElementById('task-type').value;
+
+            if (!title || !link) {
+                return alert('Por favor, llena el nombre y el enlace de la tarea.');
+            }
+
             fetch('/api/admin/tasks', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ title, link, reward, type })
-            }).then(() => {
-                loadTasks();
-                loadStats();
-                document.getElementById('task-title').value = '';
-                document.getElementById('task-link').value = '';
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    alert('✅ ¡Tarea agregada con éxito!');
+                    loadTasks(); 
+                    loadStats();
+                    document.getElementById('task-title').value = '';
+                    document.getElementById('task-link').value = '';
+                } else {
+                    alert('❌ Error del servidor: ' + (data.error || 'No se pudo guardar la tarea'));
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('❌ Error de conexión. Revisa la consola del servidor.');
             });
         }
 
@@ -186,9 +202,8 @@
             fetch(`/api/admin/tasks/${id}`, { method: 'DELETE' }).then(() => { loadTasks(); loadStats(); });
         }
 
-        // --- ESTADÍSTICAS (NUEVO CONTADOR) ---
+        // --- ESTADÍSTICAS ---
         function loadStats() {
-            // Cargar contador de usuarios
             fetch('/api/admin/users')
                 .then(res => res.json())
                 .then(data => {
@@ -197,7 +212,6 @@
                     document.getElementById('active-users').innerText = activeUsers;
                 });
 
-            // Cargar rendimiento de tareas
             fetch('/api/admin/stats')
                 .then(res => res.json())
                 .then(data => {
@@ -321,7 +335,7 @@
             fetch(`/api/admin/withdrawals/${id}/reject`, { method: 'POST' }).then(() => loadWithdrawals());
         }
 
-        // --- BROADCAST (NUEVA FUNCIÓN) ---
+        // --- BROADCAST ---
         function sendBroadcast() {
             const message = document.getElementById('broadcast-msg').value;
             const imageUrl = document.getElementById('broadcast-image').value;
@@ -344,4 +358,4 @@
         }
     </script>
 </body>
-                        </html>
+                    </html>
