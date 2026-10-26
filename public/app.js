@@ -8,24 +8,38 @@ const MEGAFONO_ICON = "https://raw.githubusercontent.com/hyuuknbctuuhfd/GoldenNe
 // --- NOMBRES FALSOS PARA LOS MENSAJES DE RETIRO ---
 const fakeUsers = ["@CryptoKing_99", "@MariaCrypto", "@Elon_Fan", "@AirdropHunter", "@TonMaster", "@Faraon_Pro", "@GoldDigger", "@BTC_Lover", "@SandWalker", "@NileTrader", "@Scarab_777", "@PyramidX", "@Anubis_Rich", "@Cleopatra_VIP", "@Osiris_Earn", "@Crypto_Advisor", "@Satoshi_Fan", "@Ethereum_Whale", "@USDT_Master", "@Binance_Pro", "@Telegram_Earner", "@Lucky_User", "@Web3_Gamer", "@NFT_Collector", "@DeFi_King", "@CryptoNinja", "@MoonBoy", "@HODLer_2024", "@Altcoin_Hunter", "@Blockchain_Bro", "@Smart_Trader", "@Crypto_Guru", "@Earn_Daily", "@Passive_Income", "@Micro_Task_Pro", "@Cash_Hunter", "@Gold_Rush", "@Token_Whale", "@Satoshi_Nakamoto", "@Vitalik_Fan", "@Crypto_Wolf", "@Falcon_Trade", "@Bull_Market", "@Cobra_Coin", "@Lion_Heart", "@Eagle_Eye", "@Tiger_Trade", "@Shark_Invest", "@Dragon_Crypto", "@Phoenix_Rise", "@Alpha_Wolf", "@Beta_Tester"];
 
-// --- LÓGICA DE LA BARRA DE CAPITAL (Baja en 3 meses) ---
-let totalCapital = 200000;
-const capitalDuration = 90 * 24 * 60 * 60 * 1000; // 90 días
-const startTime = Date.now();
-const capitalPerMs = totalCapital / capitalDuration;
+// --- LÓGICA DE LA BARRA DE CAPITAL (750,000 USDT - Dura ~2 meses) ---
+let totalCapital = 750000;
+const capitalPerHour = 1000; 
+const capitalPerSecond = capitalPerHour / 3600;
 
 function updateCapital() {
-    const elapsed = Date.now() - startTime;
-    let remaining = totalCapital - (elapsed * capitalPerMs);
-    if (remaining < 0) remaining = 0;
+    const ahora = new Date();
+    const horaActual = ahora.getHours(); 
     
-    const capitalEl = document.getElementById('capital-amount');
-    const fillEl = document.getElementById('capital-fill');
+    // Solo baja el capital entre las 8:00 AM y las 12:00 AM (medianoche)
+    const estaActivo = (horaActual >= 8 && horaActual <= 23);
     
-    if(capitalEl) capitalEl.innerText = Math.floor(remaining).toLocaleString('en-US') + ' USDT';
-    if(fillEl) fillEl.style.width = ((remaining / totalCapital) * 100) + '%';
+    let capitalEl = document.getElementById('capital-amount');
+    let fillEl = document.getElementById('capital-fill');
     
-    requestAnimationFrame(updateCapital);
+    if (capitalEl && fillEl) {
+        let currentVal = parseFloat(capitalEl.innerText.replace(/,/g, '').replace(' USDT', ''));
+        if (isNaN(currentVal)) currentVal = totalCapital;
+
+        if (estaActivo && currentVal > 0) {
+            let newVal = currentVal - capitalPerSecond;
+            if (newVal < 0) newVal = 0;
+            
+            capitalEl.innerText = Math.floor(newVal).toLocaleString('en-US') + ' USDT';
+            fillEl.style.width = ((newVal / totalCapital) * 100) + '%';
+        } else {
+            capitalEl.innerText = Math.floor(currentVal).toLocaleString('en-US') + ' USDT';
+            fillEl.style.width = ((currentVal / totalCapital) * 100) + '%';
+        }
+    }
+    
+    setTimeout(updateCapital, 1000);
 }
 updateCapital();
 
@@ -50,7 +64,7 @@ function showFakeWithdrawal() {
 
 setTimeout(() => {
     showFakeWithdrawal();
-    setInterval(showFakeWithdrawal, 30000); // Cada 30 segundos
+    setInterval(showFakeWithdrawal, 30000); 
 }, 5000);
 
 
@@ -131,7 +145,6 @@ function loadUserData() {
     if (!userId) return;
     
     fetch(`/api/user/${userId}`).then(res => res.json()).then(data => {
-        // ARREGLO DEL NaN
         const safeBalance = (data && data.balance !== undefined && data.balance !== null) ? data.balance : 0.00;
         
         animateValue('balance', 0, safeBalance, 1500);
@@ -142,7 +155,6 @@ function loadUserData() {
         document.getElementById('total-refs').innerText = data.referidos;
         document.getElementById('total-earned').innerText = (data.referidos * 1.5).toFixed(2) + ' USDT';
 
-        // AVISO DE 24 HORAS
         const fechaRegistro = new Date(data.created_at).getTime();
         const ahora = new Date().getTime();
         const horasTranscurridas = (ahora - fechaRegistro) / (1000 * 60 * 60);
@@ -246,7 +258,6 @@ document.getElementById('checkin-btn').addEventListener('click', () => {
     });
 });
 
-// --- LÓGICA DE RETIRO CON REDES ---
 let selectedNetwork = 'BEP20';
 function selectNetwork(network, btnElement) {
     selectedNetwork = network;
