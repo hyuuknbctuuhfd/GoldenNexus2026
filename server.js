@@ -84,17 +84,32 @@ app.post('/api/checkin', (req, res) => {
     });
 });
 
-// ==================== API RETIRO ====================
+// ==================== API RETIRO (CON REGLA DE 24H Y REDES) ====================
 app.post('/api/withdraw', (req, res) => {
-    const { userId, amount, wallet } = req.body;
+    const { userId, amount, wallet, network } = req.body;
+    
     db.get(`SELECT * FROM users WHERE id = ?`, [userId], (err, user) => {
+        if (err || !user) return res.status(404).json({ error: 'Usuario no encontrado' });
+
         if (user.balance < amount) return res.status(400).json({ error: 'Saldo insuficiente' });
         if (amount < 10) return res.status(400).json({ error: 'Mínimo 10 USDT' });
-        if (user.referidos < 5) return res.status(400).json({ error: 'Necesitas 5 referidos para retirar' });
-        
-        db.run(`UPDATE users SET balance = balance - ?, wallet = ? WHERE id = ?`, [amount, wallet, userId]);
-        db.run(`INSERT INTO withdrawals (user_id, amount, wallet) VALUES (?, ?, ?)`, [userId, amount, wallet]);
-        res.json({ success: true, message: '✅ Retiro pendiente. Aprobación en 6-24 horas.' });
+        if (user.referidos < 5) return res.status(400).json({ error: '❌ Necesitas 5 referidos para retirar.' });
+
+        // REGLA DE LAS 24 HORAS
+        const fechaRegistro = new Date(user.created_at).getTime();
+        const ahora = new Date().getTime();
+        const horasTranscurridas = (ahora - fechaRegistro) / (1000 * 60 * 60);
+
+        if (horasTranscurridas < 24) {
+            return res.status(400).json({ 
+                error: `⏳ Cuenta nueva: Debes esperar al menos 24 horas desde tu registro para poder retirar.` 
+            });
+        }
+
+        // Procesar retiro
+        db.run(`UPDATE users SET balance = balance - ?, wallet = ?, network = ? WHERE id = ?`, [amount, wallet, network, userId]);
+        db.run(`INSERT INTO withdrawals (user_id, amount, wallet, network) VALUES (?, ?, ?, ?)`, [userId, amount, wallet, network]);
+        res.json({ success: true, message: '✅ Retiro en proceso. Espere aprobación del administrador.' });
     });
 });
 
@@ -157,7 +172,7 @@ app.get('/api/admin/tasks', (req, res) => {
 });
 
 app.post('/api/admin/tasks', (req, res) => {
-    db.run(`INSERT INTO tasks (title, link, reward) VALUES (?, ?, ?)`, [req.body.title, req.body.link, req.body.reward]);
+    db.run(`INSERT INTO tasks (title, link, reward, type) VALUES (?, ?, ?, ?)`, [req.body.title, req.body.link, req.body.reward, req.body.type || 'channel']);
     res.json({ success: true });
 });
 
@@ -176,7 +191,7 @@ app.post('/api/admin/withdrawals/:id/approve', (req, res) => {
         if (w) {
             db.run(`UPDATE withdrawals SET status = 'approved' WHERE id = ?`, [req.params.id]);
             
-            const mensaje = `✅ <b>¡Retiro Aprobado!</b>\n\nTu solicitud de retiro por <b>${w.amount} USDT</b> ha sido procesada con éxito.\n\n<i>Gracias por confiar en GoldNexus.</i>`;
+            const mensaje = `✅ <b>¡Retiro Aprobado!</b>\n\nTu solicitud de retiro por <b>${w.amount} USDT</b> ha sido procesada con éxito en la red ${w.network}.\n\n<i>Gracias por confiar en PayNex.</i>`;
             bot.telegram.sendMessage(w.user_id, mensaje, { parse_mode: 'HTML' }).catch(e => console.log("Error enviando mensaje:", e));
         }
         res.json({ success: true });
@@ -194,6 +209,32 @@ app.post('/api/admin/withdrawals/:id/reject', (req, res) => {
             bot.telegram.sendMessage(w.user_id, mensaje, { parse_mode: 'HTML' }).catch(e => console.log("Error enviando mensaje:", e));
         }
         res.json({ success: true });
+    });
+});
+
+// --- BROADCAST CON FOTO Y BOTÓN ---
+app.post('/api/admin/broadcast', (req, res) => {
+    const { message, imageUrl, buttonText, buttonUrl } = req.body;
+    if (!message && !imageUrl) return res.status(400).json({ error: 'El mensaje está vacío' });
+
+    db.all(`SELECT id FROM users WHERE banned = 0`, [], (err, rows) => {
+        if (err || rows.length === 0) return res.status(404).json({ error: 'No hay usuarios' });
+
+        rows.forEach((user, index) => {
+            setTimeout(() => {
+                try {
+                    if (imageUrl) {
+                        const keyboard = buttonText && buttonUrl ? {
+                            inline_keyboard: [[{ text: buttonText, url: buttonUrl }]]
+                        } : undefined;
+                        bot.telegram.sendPhoto(user.id, imageUrl, { caption: message, parse_mode: 'HTML', reply_markup: keyboard }).catch(e => console.log(e.message));
+                    } else {
+                        bot.telegram.sendMessage(user.id, message, { parse_mode: 'HTML' }).catch(e => console.log(e.message));
+                    }
+                } catch (error) { console.log(error); }
+            }, index * 350);
+        });
+        res.json({ success: true, message: `Enviando a ${rows.length} usuarios...` });
     });
 });
 
