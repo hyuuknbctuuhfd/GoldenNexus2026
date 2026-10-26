@@ -5,6 +5,7 @@ const userId = tg.initDataUnsafe?.user?.id;
 const ROBOT_ICON = "https://raw.githubusercontent.com/hyuuknbctuuhfd/GoldenNexus2026/main/public/robot.png";
 const MEGAFONO_ICON = "https://raw.githubusercontent.com/hyuuknbctuuhfd/GoldenNexus2026/main/public/megafono.png";
 
+// --- NOMBRES FALSOS PARA LOS MENSAJES DE RETIRO ---
 const fakeUsers = ["@CryptoKing_99", "@MariaCrypto", "@Elon_Fan", "@AirdropHunter", "@TonMaster", "@Faraon_Pro", "@GoldDigger", "@BTC_Lover", "@SandWalker", "@NileTrader", "@Scarab_777", "@PyramidX", "@Anubis_Rich", "@Cleopatra_VIP", "@Osiris_Earn", "@Crypto_Advisor", "@Satoshi_Fan", "@Ethereum_Whale", "@USDT_Master", "@Binance_Pro", "@Telegram_Earner", "@Lucky_User", "@Web3_Gamer", "@NFT_Collector", "@DeFi_King", "@CryptoNinja", "@MoonBoy", "@HODLer_2024", "@Altcoin_Hunter", "@Blockchain_Bro", "@Smart_Trader", "@Crypto_Guru", "@Earn_Daily", "@Passive_Income", "@Micro_Task_Pro", "@Cash_Hunter", "@Gold_Rush", "@Token_Whale", "@Satoshi_Nakamoto", "@Vitalik_Fan", "@Crypto_Wolf", "@Falcon_Trade", "@Bull_Market", "@Cobra_Coin", "@Lion_Heart", "@Eagle_Eye", "@Tiger_Trade", "@Shark_Invest", "@Dragon_Crypto", "@Phoenix_Rise", "@Alpha_Wolf", "@Beta_Tester"];
 
 // --- LÓGICA DE LA BARRA DE CAPITAL (750,000 USDT) ---
@@ -12,34 +13,31 @@ const totalCapital = 750000;
 const capitalPerHour = 1000; 
 const capitalPerSecond = capitalPerHour / 3600;
 
-// Hora de inicio (simulamos que empezó hace 1 hora para que se vea movimiento)
-let currentCapital = totalCapital - (capitalPerHour * 1); 
-let lastUpdate = Date.now();
+// Fijamos una fecha de inicio en el pasado para que ya se vea movimiento
+const startDate = new Date();
+startDate.setHours(startDate.getHours() - 5); // Simula que empezó hace 5 horas
+const startTime = startDate.getTime();
 
 function updateCapital() {
-    const ahora = new Date();
-    const horaActual = ahora.getHours(); 
-    const estaActivo = (horaActual >= 8 && horaActual <= 23);
-    
-    const ahoraMs = Date.now();
-    const tiempoTranscurrido = (ahoraMs - lastUpdate) / 1000; // Segundos
-    lastUpdate = ahoraMs;
-
     const capitalEl = document.getElementById('capital-amount');
     const fillEl = document.getElementById('capital-fill');
     
     if (capitalEl && fillEl) {
-        if (estaActivo && currentCapital > 0) {
-            // Restamos el capital que corresponde a los segundos transcurridos
-            currentCapital -= (capitalPerSecond * tiempoTranscurrido);
-            if (currentCapital < 0) currentCapital = 0;
-            
-            capitalEl.innerText = Math.floor(currentCapital).toLocaleString('en-US') + ' USDT';
-            fillEl.style.width = ((currentCapital / totalCapital) * 100) + '%';
-        }
+        const ahora = new Date();
+        const horaActual = ahora.getHours(); 
+        const estaActivo = (horaActual >= 8 && horaActual <= 23); // Baja solo de 8 AM a 11 PM
+        
+        const tiempoTranscurridoMs = Date.now() - startTime;
+        
+        // El capital baja constantemente (simulando que el proyecto gasta dinero)
+        let currentVal = totalCapital - ((tiempoTranscurridoMs / 1000) * capitalPerSecond);
+        
+        if (currentVal < 0) currentVal = 0;
+        
+        capitalEl.innerText = Math.floor(currentVal).toLocaleString('en-US') + ' USDT';
+        fillEl.style.width = ((currentVal / totalCapital) * 100) + '%';
     }
     
-    // Repetir cada 1 segundo
     setTimeout(updateCapital, 1000);
 }
 updateCapital();
@@ -67,7 +65,6 @@ setTimeout(() => {
     showFakeWithdrawal();
     setInterval(showFakeWithdrawal, 30000); 
 }, 5000);
-
 
 // --- FUNCIONES BASE ---
 function showToast(message, isError = false) {
@@ -145,25 +142,27 @@ function loadUserData() {
     if (!userId) return;
     
     fetch(`/api/user/${userId}`).then(res => res.json()).then(data => {
-        const safeBalance = (data && data.balance !== undefined && data.balance !== null) ? data.balance : 0.00;
+        // BLINDAJE CONTRA EL NaN
+        const safeBalance = (data && data.balance !== undefined && data.balance !== null && !isNaN(data.balance)) ? data.balance : 0.00;
         
         animateValue('balance', 0, safeBalance, 1500);
         document.getElementById('withdraw-balance').innerText = safeBalance.toFixed(2);
         const receiveAmount = Math.max(0, safeBalance); 
         document.getElementById('receive-amount').innerText = receiveAmount.toFixed(2) + ' USDT';
         document.getElementById('ref-link-text').innerText = getReferralLink();
-        document.getElementById('total-refs').innerText = data.referidos;
-        document.getElementById('total-earned').innerText = (data.referidos * 1.5).toFixed(2) + ' USDT';
+        document.getElementById('total-refs').innerText = data.referidos || 0;
+        document.getElementById('total-earned').innerText = ((data.referidos || 0) * 1.5).toFixed(2) + ' USDT';
 
+        // BLINDAJE DEL AVISO DE 24 HORAS (Sin importar la hora del servidor)
         const fechaRegistro = new Date(data.created_at).getTime();
         const ahora = new Date().getTime();
         const horasTranscurridas = (ahora - fechaRegistro) / (1000 * 60 * 60);
+        
         const warningDiv = document.getElementById('withdraw-warning');
         if (warningDiv) {
             if (horasTranscurridas < 24) {
-                const horasRestantes = Math.ceil(24 - horasTranscurridas);
                 warningDiv.style.display = 'block';
-                warningDiv.innerHTML = `⏳ <b>Cuenta nueva:</b> Podrás retirar en <b>${horasRestantes} horas</b>.`;
+                warningDiv.innerHTML = `⏳ <b>Cuenta nueva:</b> Debes esperar al menos <b>1 día (24 horas)</b> desde tu registro para retirar. ¡Sigue completando tareas!`;
             } else { 
                 warningDiv.style.display = 'none'; 
             }
