@@ -13,6 +13,47 @@ app.use(express.json());
 app.use(express.static('public'));
 app.use('/admin', express.static('admin'));
 
+// ==================== LÓGICA DEL CAPITAL (NUEVA) ====================
+// Creamos la tabla para guardar el capital si no existe
+db.run(`CREATE TABLE IF NOT EXISTS project_config (
+    id INTEGER PRIMARY KEY,
+    capital_restante REAL,
+    ultima_actualizacion INTEGER
+)`);
+
+// Configuración del capital
+const CAPITAL_INICIAL = 750000;
+const CAPITAL_POR_HORA = 1000; 
+const CAPITAL_POR_MS = CAPITAL_POR_HORA / (60 * 60 * 1000);
+
+// Inicializar la tabla la primera vez
+db.get(`SELECT * FROM project_config WHERE id = 1`, [], (err, row) => {
+    if (!row) {
+        db.run(`INSERT INTO project_config (id, capital_restante, ultima_actualizacion) VALUES (1, ?, ?)`, 
+        [CAPITAL_INICIAL, Date.now()]);
+    }
+});
+
+// Ruta para obtener el capital actual
+app.get('/api/capital', (req, res) => {
+    db.get(`SELECT * FROM project_config WHERE id = 1`, [], (err, row) => {
+        if (err || !row) return res.json({ capital: CAPITAL_INICIAL });
+        
+        const ahora = Date.now();
+        const tiempoTranscurrido = ahora - row.ultima_actualizacion;
+        
+        // Calculamos cuánto ha bajado desde la última vez
+        let nuevoCapital = row.capital_restante - (tiempoTranscurrido * CAPITAL_POR_MS);
+        if (nuevoCapital < 0) nuevoCapital = 0;
+        
+        // Guardamos el nuevo valor en la base de datos
+        db.run(`UPDATE project_config SET capital_restante = ?, ultima_actualizacion = ? WHERE id = 1`, 
+        [nuevoCapital, ahora]);
+        
+        res.json({ capital: nuevoCapital });
+    });
+});
+
 // ==================== API USUARIO ====================
 app.get('/api/user/:id', (req, res) => {
     db.get(`SELECT * FROM users WHERE id = ?`, [req.params.id], (err, row) => {
@@ -44,7 +85,6 @@ app.get('/api/tasks/:userId', (req, res) => {
     });
 });
 
-// Pago directo sin verificar
 app.post('/api/claim-task', (req, res) => {
     const { userId, taskId } = req.body;
     db.get(`SELECT * FROM tasks WHERE id = ? AND active = 1`, [taskId], (err, task) => {
@@ -55,7 +95,6 @@ app.post('/api/claim-task', (req, res) => {
             db.run(`INSERT INTO completed_tasks (user_id, task_id) VALUES (?, ?)`, [userId, taskId]);
             db.run(`UPDATE users SET balance = balance + ? WHERE id = ?`, [task.reward, userId]);
             
-            // Bono de 3 tareas
             db.get(`SELECT referidor_id FROM users WHERE id = ?`, [userId], (err, user) => {
                 if (user && user.referidor_id) {
                     db.get(`SELECT COUNT(*) as total FROM completed_tasks WHERE user_id = ?`, [userId], (err, count) => {
@@ -84,10 +123,9 @@ app.post('/api/checkin', (req, res) => {
     });
 });
 
-// ==================== API RETIRO (CON REGLA DE 24H Y REDES) ====================
+// ==================== API RETIRO ====================
 app.post('/api/withdraw', (req, res) => {
     const { userId, amount, wallet, network } = req.body;
-    
     db.get(`SELECT * FROM users WHERE id = ?`, [userId], (err, user) => {
         if (err || !user) return res.status(404).json({ error: 'Usuario no encontrado' });
 
@@ -95,18 +133,14 @@ app.post('/api/withdraw', (req, res) => {
         if (amount < 10) return res.status(400).json({ error: 'Mínimo 10 USDT' });
         if (user.referidos < 5) return res.status(400).json({ error: '❌ Necesitas 5 referidos para retirar.' });
 
-        // REGLA DE LAS 24 HORAS
         const fechaRegistro = new Date(user.created_at).getTime();
         const ahora = new Date().getTime();
         const horasTranscurridas = (ahora - fechaRegistro) / (1000 * 60 * 60);
 
         if (horasTranscurridas < 24) {
-            return res.status(400).json({ 
-                error: `⏳ Cuenta nueva: Debes esperar al menos 24 horas desde tu registro para poder retirar.` 
-            });
+            return res.status(400).json({ error: `⏳ Cuenta nueva: Debes esperar al menos 24 horas desde tu registro para poder retirar.` });
         }
 
-        // Procesar retiro
         db.run(`UPDATE users SET balance = balance - ?, wallet = ?, network = ? WHERE id = ?`, [amount, wallet, network, userId]);
         db.run(`INSERT INTO withdrawals (user_id, amount, wallet, network) VALUES (?, ?, ?, ?)`, [userId, amount, wallet, network]);
         res.json({ success: true, message: '✅ Retiro en proceso. Espere aprobación del administrador.' });
@@ -185,34 +219,29 @@ app.get('/api/admin/withdrawals', (req, res) => {
     db.all(`SELECT w.*, u.username FROM withdrawals w JOIN users u ON w.user_id = u.id WHERE w.status = 'pending'`, [], (err, rows) => res.json(rows));
 });
 
-// --- APROBAR RETIRO (CON NOTIFICACIÓN AL USUARIO) ---
 app.post('/api/admin/withdrawals/:id/approve', (req, res) => {
     db.get(`SELECT * FROM withdrawals WHERE id = ?`, [req.params.id], (err, w) => {
         if (w) {
             db.run(`UPDATE withdrawals SET status = 'approved' WHERE id = ?`, [req.params.id]);
-            
             const mensaje = `✅ <b>¡Retiro Aprobado!</b>\n\nTu solicitud de retiro por <b>${w.amount} USDT</b> ha sido procesada con éxito en la red ${w.network}.\n\n<i>Gracias por confiar en PayNex.</i>`;
-            bot.telegram.sendMessage(w.user_id, mensaje, { parse_mode: 'HTML' }).catch(e => console.log("Error enviando mensaje:", e));
+            bot.telegram.sendMessage(w.user_id, mensaje, { parse_mode: 'HTML' }).catch(e => console.log(e));
         }
         res.json({ success: true });
     });
 });
 
-// --- RECHAZAR RETIRO (CON NOTIFICACIÓN Y DEVOLUCIÓN DE SALDO) ---
 app.post('/api/admin/withdrawals/:id/reject', (req, res) => {
     db.get(`SELECT * FROM withdrawals WHERE id = ?`, [req.params.id], (err, w) => {
         if (w) {
             db.run(`UPDATE users SET balance = balance + ? WHERE id = ?`, [w.amount, w.user_id]);
             db.run(`UPDATE withdrawals SET status = 'rejected' WHERE id = ?`, [req.params.id]);
-            
-            const mensaje = `❌ <b>Retiro Rechazado</b>\n\nTu solicitud de retiro por <b>${w.amount} USDT</b> no pudo ser procesada.\nEl saldo ha sido devuelto a tu cuenta.\n\n<i>Contacta al soporte si crees que es un error.</i>`;
-            bot.telegram.sendMessage(w.user_id, mensaje, { parse_mode: 'HTML' }).catch(e => console.log("Error enviando mensaje:", e));
+            const mensaje = `❌ <b>Retiro Rechazado</b>\n\nTu solicitud de retiro por <b>${w.amount} USDT</b> no pudo ser procesada.\nEl saldo ha sido devuelto a tu cuenta.`;
+            bot.telegram.sendMessage(w.user_id, mensaje, { parse_mode: 'HTML' }).catch(e => console.log(e));
         }
         res.json({ success: true });
     });
 });
 
-// --- BROADCAST CON FOTO Y BOTÓN ---
 app.post('/api/admin/broadcast', (req, res) => {
     const { message, imageUrl, buttonText, buttonUrl } = req.body;
     if (!message && !imageUrl) return res.status(400).json({ error: 'El mensaje está vacío' });
