@@ -23,9 +23,9 @@ bot.start((ctx) => {
             }
         }
 
-        // MENSAJE DE BIENVENIDA PREMIUM
+        // MENSAJE DE BIENVENIDA PREMIUM (Cambiado a PAYNEX)
         const welcomeMessage = `
-<b>✨ ¡BIENVENIDO A GOLDNEXUS! ✨</b>
+<b>✨ ¡BIENVENIDO A PAYNEX! ✨</b>
 
 La plataforma #1 donde puedes ganar <b>USDT</b> de forma fácil y rápida realizando microtareas.
 
@@ -33,22 +33,96 @@ La plataforma #1 donde puedes ganar <b>USDT</b> de forma fácil y rápida realiz
 🔹 Únete a nuestros canales y bots aliados.
 🔹 Completa tareas diarias (Check-in).
 🔹 Invita a amigos y sube en el ranking.
-🔹 Retira tus ganancias a tu billetera BEP20.
+🔹 Retira tus ganancias a tu billetera BEP20, TRC20 o ERC20.
 
 <b>💰 ¡Empieza a ganar ahora mismo!</b>
 Toca el botón de abajo para abrir tu billetera y ver las tareas disponibles.
 
-<i>⚡ Powered by GoldNexus</i>
+<i>⚡ Powered by PayNex</i>
         `;
 
         ctx.replyWithHTML(welcomeMessage, {
             reply_markup: {
                 inline_keyboard: [
-                    [{ text: '🚀 Abrir GoldNexus', web_app: { url: process.env.MINI_APP_URL } }],
+                    [{ text: '🚀 Abrir PayNex', web_app: { url: process.env.MINI_APP_URL } }],
+                    [{ text: '🔗 ¿Cómo gano referidos?', callback_data: 'how_to_refer' }], // NUEVO BOTÓN
                     [{ text: '🌐 Cambiar Idioma', callback_data: 'change_language' }]
                 ]
             }
         });
+    });
+});
+
+// ==================== ACCIÓN: MOSTRAR GRUPOS DE SPAM ====================
+bot.action('how_to_refer', (ctx) => {
+    ctx.answerCbQuery();
+    
+    const grupos = `
+<b>🔥 ¡GANA REFERIDOS MASIVAMENTE! 🔥</b>
+
+Para ganar referidos rápido, copia tu enlace de invitación (desde la sección Amigos de la app) y pégalo en estos grupos de Telegram:
+
+📌 <b>Lista completa de 80 grupos (Únete a todos):</b>
+https://t.me/addlist/JhpOm0Lw8EQ0Y2I1
+
+📌 <b>50 Grupos principales:</b>
+1. @Unlimited_refferals_share
+2. @LINK_SHARE_LINK
+3. @Ponzi_Links
+4. @SHARE_USDT_LINKS
+5. @USDT_LINKSHARE
+6. @Money_IsEverything
+7. @PnoziPlatformShare
+8. @PonziSystmMall
+9. @BIG_TEAM8877
+10. @Legit_Earning_Platforms
+11. @Full_Of_Spam
+12. @LINK_SHARE768
+13. @Share_Your_Reffarel
+14. @exchangeshills
+15. @spamshills_chat
+16. @spamchat_room
+17. @Sharing_is_grow
+18. @Crypto_ponzi_share
+19. @growing_steong_pn
+20. @lost_sharing
+21. @secret_gems_shills
+22. @Fastest_link_share
+23. @Rockstar_shills
+24. @share_beetween
+25. @BTS_LINK_EX
+26. @New_Mall_Share
+27. @alon_exchang
+28. @moneytree_share
+29. @noty_ex
+30. @prof_cryptopromotion
+31. @Ponzi_share_link
+32. @EXCHANGELINKS_SHARE
+33. @business_promoter_879
+34. @Crypto_exchage
+35. @Money_make_loda
+36. @Exchange_reffarel
+37. @gojolink_sharing
+38. @yuta_linksharing
+39. @sukuna_link_sharing
+40. @fusiguro_linksharing
+41. @max_linksharing
+42. @Network_marketersah
+43. @USDT_EARNIN
+44. @moneymoney_moneymoney
+45. @linkboosterspam
+46. @sharesharesharw
+47. @spamspamspam_l
+48. @earningwith_spam
+49. @spam_your_rl
+50. @unlimited_spamlink
+
+<i>⚠️ Pega tu enlace en la mayor cantidad de grupos posible para maximizar tus ganancias.</i>
+    `;
+    
+    ctx.replyWithHTML(grupos).catch(e => {
+        console.log(e);
+        ctx.reply("Hubo un error al mostrar los grupos. Intenta de nuevo.");
     });
 });
 
