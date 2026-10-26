@@ -216,3 +216,103 @@ header { display: flex; justify-content: space-between; align-items: center; mar
 /* ANIMACIONES GENERALES */
 @keyframes coinFloat { 0%, 100% { transform: translateY(0) rotateY(0deg); } 50% { transform: translateY(-8px) rotateY(180deg); } }
 @keyframes floatUpDown { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+/* =========================================
+   NUEVOS ESTILOS AÑADIDOS (PayNex)
+   ========================================= */
+
+/* BARRA DE CAPITAL (Arriba de todo) */
+.capital-bar-container {
+    position: fixed;
+    top: 0; left: 0; width: 100%;
+    background: rgba(10, 15, 10, 0.95);
+    border-bottom: 1px solid #00ff88;
+    padding: 10px 15px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+.capital-text {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #fff;
+    font-weight: bold;
+}
+.capital-text span:last-child {
+    color: #00ff88;
+}
+.capital-progress {
+    width: 100%; height: 6px;
+    background: #333;
+    border-radius: 3px;
+    overflow: hidden;
+}
+.capital-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #00ff88, #00cc6a);
+    width: 100%;
+    transition: width 1s linear;
+}
+
+/* MENSAJES FLOTANTES DE RETIRO (TOASTS) */
+.toast-container {
+    position: fixed;
+    top: 60px; /* Debajo de la barra de capital */
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 999;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 90%;
+    max-width: 350px;
+    pointer-events: none;
+}
+.toast {
+    background: rgba(17, 24, 17, 0.95);
+    backdrop-filter: blur(10px);
+    border: 1px solid #00ff88;
+    border-left: 4px solid #00ff88;
+    color: #fff;
+    padding: 10px 15px;
+    border-radius: 10px;
+    font-size: 12px;
+    box-shadow: 0 4px 15px rgba(0, 255, 136, 0.2);
+    animation: slideInTop 0.4s ease forwards, fadeOutTop 0.5s ease 4s forwards;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+@keyframes slideInTop { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fadeOutTop { from { opacity: 1; } to { opacity: 0; } }
+
+/* BOTONES DE RED (BEP20, TRC20, ERC20) */
+.network-selector {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 15px;
+}
+.network-btn {
+    flex: 1;
+    background: rgba(0,0,0,0.5);
+    border: 1px solid #555;
+    color: #888;
+    padding: 8px;
+    border-radius: 5px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-family: 'Segoe UI', sans-serif;
+}
+.network-btn.active {
+    border-color: #00ff88;
+    color: #00ff88;
+    background: rgba(0, 255, 136, 0.1);
+    box-shadow: 0 0 10px rgba(0, 255, 136, 0.2);
+}
+
+/* ARREGLO PARA QUE EL HEADER NO CHOQUE CON LA BARRA DE CAPITAL */
+.app-container {
+    padding-top: 50px; /* Espacio para la barra de capital */
+    }
