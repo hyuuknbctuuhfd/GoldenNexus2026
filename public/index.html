@@ -3,20 +3,32 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>GoldNexus</title>
+    <title>PayNex</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
+    <!-- CONTENEDOR DE NOTIFICACIONES (Toasts) -->
     <div id="toast-container" class="toast-container"></div>
 
-    <!-- INTRO -->
+    <!-- BARRA DE CAPITAL (NUEVO) -->
+    <div class="capital-bar-container">
+        <div class="capital-text">
+            <span>Capital del Proyecto:</span>
+            <span id="capital-amount">200,000 USDT</span>
+        </div>
+        <div class="capital-progress">
+            <div class="capital-fill" id="capital-fill"></div>
+        </div>
+    </div>
+
+    <!-- INTRO (Se mantiene igual, solo cambia el texto) -->
     <div id="intro-screen" class="intro-screen">
         <div class="intro-logo-container">
-            <img src="https://raw.githubusercontent.com/hyuuknbctuuhfd/GoldenNexus2026/main/public/logo.png" alt="GoldNexus" class="intro-logo">
+            <img src="https://raw.githubusercontent.com/hyuuknbctuuhfd/GoldenNexus2026/main/public/logo.png" alt="PayNex" class="intro-logo">
             <div class="intro-logo-glow"></div>
         </div>
-        <h1 class="intro-title">GOLDNEXUS</h1>
+        <h1 class="intro-title">PAYNEX</h1>
         <p class="intro-subtitle">PEOPLE • REWARDS • RANKING</p>
         
         <div class="intro-lang-buttons">
@@ -27,7 +39,7 @@
     </div>
 
     <!-- APP PRINCIPAL -->
-    <div id="main-app" class="app-container" style="display: none;">
+    <div id="main-app" class="app-container" style="display: none; padding-top: 50px;">
         
         <header>
             <div class="logo-container">
@@ -36,7 +48,7 @@
                     <div class="logo-glow"></div>
                 </div>
                 <div>
-                    <h1 class="glow-text">GOLDNEXUS</h1>
+                    <h1 class="glow-text">PAYNEX</h1>
                     <p class="subtitle">PEOPLE • REWARDS • RANKING</p>
                 </div>
             </div>
@@ -136,6 +148,20 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- NUEVOS BONOS POR METAS -->
+                <div class="card" style="margin-top: 20px; border: 1px solid #00ff88;">
+                    <h3 style="color: #00ff88; text-align: center; margin-bottom: 10px;">BONOS POR METAS</h3>
+                    <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed rgba(0,255,136,0.3);">
+                        <span>Invita a 10 amigos</span> <span style="color: #00ff88;">+3 USDT</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px dashed rgba(0,255,136,0.3);">
+                        <span>Invita a 50 amigos</span> <span style="color: #00ff88;">+10 USDT</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; padding: 10px 0;">
+                        <span>Invita a 100 amigos</span> <span style="color: #ffd700;">+25 USDT</span>
+                    </div>
+                </div>
             </div>
 
             <!-- PESTAÑA 5: RETIRAR -->
@@ -147,20 +173,16 @@
                         <span id="withdraw-balance">0.00</span> <span class="currency">USDT</span>
                     </div>
 
-                    <h3 style="font-size: 14px; margin-bottom: 10px;">Red</h3>
-                    <div class="network-box">
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <span style="font-size: 20px;">🛡️</span>
-                            <div>
-                                <div style="font-weight: bold; font-size: 14px;">BSC</div>
-                                <div style="font-size: 10px; color: #00ff88; background: rgba(0,255,136,0.1); padding: 2px 6px; border-radius: 4px; display: inline-block;">BEP20 (Only Trust Wallet)</div>
-                            </div>
-                        </div>
-                        <span style="color: #00ff88; font-size: 18px;">✔️</span>
+                    <!-- NUEVO SELECTOR DE RED -->
+                    <h3 style="font-size: 14px; margin-bottom: 10px;">Seleccionar Red</h3>
+                    <div class="network-selector">
+                        <button class="network-btn active" onclick="selectNetwork('BEP20', this)">BEP20</button>
+                        <button class="network-btn" onclick="selectNetwork('TRC20', this)">TRC20</button>
+                        <button class="network-btn" onclick="selectNetwork('ERC20', this)">ERC20</button>
                     </div>
 
                     <h3 style="font-size: 14px; margin: 15px 0 10px 0;">Dirección de Wallet</h3>
-                    <input type="text" id="wallet-input" class="wallet-input" placeholder="Trust Wallet address (0x...)">
+                    <input type="text" id="wallet-input" class="wallet-input" placeholder="Pega tu dirección aquí...">
 
                     <div class="withdraw-details">
                         <div class="detail-row">
@@ -176,6 +198,9 @@
                             <span id="receive-amount" style="color: #00ff88; font-weight: bold;">0.00 USDT</span>
                         </div>
                     </div>
+
+                    <!-- NUEVO AVISO DE 24 HORAS -->
+                    <div id="withdraw-warning" style="display: none; background: rgba(255, 165, 0, 0.2); border: 1px solid orange; color: orange; padding: 10px; border-radius: 8px; font-size: 12px; margin-bottom: 15px; text-align: center;"></div>
 
                     <button class="btn-primary" style="width: 100%; padding: 16px; font-size: 16px;" onclick="requestWithdraw()">Retirar</button>
                 </div>
@@ -212,4 +237,4 @@
     <script src="intro.js"></script>
     <script src="app.js"></script>
 </body>
-                </html>
+</html>
