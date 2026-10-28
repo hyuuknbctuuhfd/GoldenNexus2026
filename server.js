@@ -117,7 +117,7 @@ app.post('/api/checkin', (req, res) => {
     });
 });
 
-// ==================== API RETIRO (SIN REGLA DE 24H) ====================
+// ==================== API RETIRO (CORREGIDO) ====================
 app.post('/api/withdraw', (req, res) => {
     const { userId, amount, wallet, network } = req.body;
     
@@ -128,13 +128,14 @@ app.post('/api/withdraw', (req, res) => {
         if (amount < 10) return res.status(400).json({ error: 'Mínimo 10 USDT' });
         if (user.referidos < 5) return res.status(400).json({ error: '❌ Necesitas 5 referidos para retirar.' });
 
-        // Procesar retiro (Descontar saldo y guardar)
-        db.run(`UPDATE users SET balance = balance - ?, wallet = ?, network = ? WHERE id = ?`, [amount, wallet, network, userId], function(err) {
+        // 1. Descontamos el saldo (SOLO saldo, sin network)
+        db.run(`UPDATE users SET balance = balance - ? WHERE id = ?`, [amount, userId], function(err) {
             if (err) {
                 console.error("Error al descontar saldo:", err);
                 return res.status(500).json({ error: 'Error interno al descontar saldo' });
             }
             
+            // 2. Guardamos el retiro en la tabla de withdrawals (Aquí sí va el network)
             db.run(`INSERT INTO withdrawals (user_id, amount, wallet, network, status) VALUES (?, ?, ?, ?, 'pending')`, [userId, amount, wallet, network], function(err) {
                 if (err) {
                     console.error("Error al guardar retiro:", err);
