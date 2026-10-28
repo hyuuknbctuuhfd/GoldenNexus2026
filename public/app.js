@@ -146,20 +146,7 @@ function loadUserData() {
         document.getElementById('total-refs').innerText = data.referidos || 0;
         document.getElementById('total-earned').innerText = ((data.referidos || 0) * 1.5).toFixed(2) + ' USDT';
 
-        // BLINDAJE DEL AVISO DE 24 HORAS
-        const fechaRegistro = new Date(data.created_at).getTime();
-        const ahora = new Date().getTime();
-        const horasTranscurridas = (ahora - fechaRegistro) / (1000 * 60 * 60);
-        
-        const warningDiv = document.getElementById('withdraw-warning');
-        if (warningDiv) {
-            if (horasTranscurridas < 24) {
-                warningDiv.style.display = 'block';
-                warningDiv.innerHTML = `⏳ <b>Cuenta nueva:</b> Debes esperar al menos <b>1 día (24 horas)</b> desde tu registro para retirar. ¡Sigue completando tareas!`;
-            } else { 
-                warningDiv.style.display = 'none'; 
-            }
-        }
+        // SE ELIMINÓ EL AVISO DE 24 HORAS AQUÍ
 
     }).catch(err => console.log(err));
     
