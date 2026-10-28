@@ -24,7 +24,6 @@ const CAPITAL_INICIAL = 750000;
 const CAPITAL_POR_HORA = 1000; 
 const CAPITAL_POR_MS = CAPITAL_POR_HORA / (60 * 60 * 1000);
 
-// Inicializar la tabla
 db.get(`SELECT * FROM project_config WHERE id = 1`, [], (err, row) => {
     if (!row) {
         db.run(`INSERT INTO project_config (id, capital_restante, ultima_actualizacion) VALUES (1, ?, ?)`, 
@@ -80,7 +79,6 @@ app.get('/api/tasks/:userId', (req, res) => {
     });
 });
 
-// Pago directo sin verificar
 app.post('/api/claim-task', (req, res) => {
     const { userId, taskId } = req.body;
     db.get(`SELECT * FROM tasks WHERE id = ? AND active = 1`, [taskId], (err, task) => {
@@ -91,7 +89,6 @@ app.post('/api/claim-task', (req, res) => {
             db.run(`INSERT INTO completed_tasks (user_id, task_id) VALUES (?, ?)`, [userId, taskId]);
             db.run(`UPDATE users SET balance = balance + ? WHERE id = ?`, [task.reward, userId]);
             
-            // Bono de 3 tareas
             db.get(`SELECT referidor_id FROM users WHERE id = ?`, [userId], (err, user) => {
                 if (user && user.referidor_id) {
                     db.get(`SELECT COUNT(*) as total FROM completed_tasks WHERE user_id = ?`, [userId], (err, count) => {
@@ -120,9 +117,10 @@ app.post('/api/checkin', (req, res) => {
     });
 });
 
-// ==================== API RETIRO ====================
+// ==================== API RETIRO (SIN REGLA DE 24H) ====================
 app.post('/api/withdraw', (req, res) => {
     const { userId, amount, wallet, network } = req.body;
+    
     db.get(`SELECT * FROM users WHERE id = ?`, [userId], (err, user) => {
         if (err || !user) return res.status(404).json({ error: 'Usuario no encontrado' });
 
@@ -130,17 +128,21 @@ app.post('/api/withdraw', (req, res) => {
         if (amount < 10) return res.status(400).json({ error: 'Mínimo 10 USDT' });
         if (user.referidos < 5) return res.status(400).json({ error: '❌ Necesitas 5 referidos para retirar.' });
 
-        const fechaRegistro = new Date(user.created_at).getTime();
-        const ahora = new Date().getTime();
-        const horasTranscurridas = (ahora - fechaRegistro) / (1000 * 60 * 60);
-
-        if (horasTranscurridas < 24) {
-            return res.status(400).json({ error: `⏳ Cuenta nueva: Debes esperar al menos 24 horas desde tu registro para poder retirar.` });
-        }
-
-        db.run(`UPDATE users SET balance = balance - ?, wallet = ?, network = ? WHERE id = ?`, [amount, wallet, network, userId]);
-        db.run(`INSERT INTO withdrawals (user_id, amount, wallet, network) VALUES (?, ?, ?, ?)`, [userId, amount, wallet, network]);
-        res.json({ success: true, message: '✅ Retiro en proceso. Espere aprobación del administrador.' });
+        // Procesar retiro (Descontar saldo y guardar)
+        db.run(`UPDATE users SET balance = balance - ?, wallet = ?, network = ? WHERE id = ?`, [amount, wallet, network, userId], function(err) {
+            if (err) {
+                console.error("Error al descontar saldo:", err);
+                return res.status(500).json({ error: 'Error interno al descontar saldo' });
+            }
+            
+            db.run(`INSERT INTO withdrawals (user_id, amount, wallet, network, status) VALUES (?, ?, ?, ?, 'pending')`, [userId, amount, wallet, network], function(err) {
+                if (err) {
+                    console.error("Error al guardar retiro:", err);
+                    return res.status(500).json({ error: 'Error interno al guardar retiro' });
+                }
+                res.json({ success: true, message: '✅ Retiro en proceso. Espere aprobación del administrador.' });
+            });
+        });
     });
 });
 
@@ -202,7 +204,6 @@ app.get('/api/admin/tasks', (req, res) => {
     db.all(`SELECT * FROM tasks`, [], (err, rows) => res.json(rows));
 });
 
-// RUTA CORREGIDA PARA AGREGAR TAREAS
 app.post('/api/admin/tasks', (req, res) => {
     const { title, link, reward, type } = req.body;
     
