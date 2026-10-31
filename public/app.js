@@ -13,15 +13,11 @@ const totalCapital = 750000;
 
 async function updateCapital() {
     try {
-        // Pedimos el capital real al servidor (que calcula el tiempo transcurrido)
         const res = await fetch('/api/capital');
         const data = await res.json();
-        
         let currentVal = data.capital || 0;
-        
         const capitalEl = document.getElementById('capital-amount');
         const fillEl = document.getElementById('capital-fill');
-        
         if (capitalEl && fillEl) {
             capitalEl.innerText = Math.floor(currentVal).toLocaleString('en-US') + ' USDT';
             fillEl.style.width = ((currentVal / totalCapital) * 100) + '%';
@@ -29,8 +25,6 @@ async function updateCapital() {
     } catch (e) {
         console.log("Error cargando capital:", e);
     }
-    
-    // Se actualiza cada 5 segundos para no saturar el servidor
     setTimeout(updateCapital, 5000);
 }
 updateCapital();
@@ -39,25 +33,15 @@ updateCapital();
 function showFakeWithdrawal() {
     const container = document.getElementById('toast-container');
     if (!container) return;
-    
     const randomUser = fakeUsers[Math.floor(Math.random() * fakeUsers.length)];
     const randomAmount = (Math.random() * (50 - 10) + 10).toFixed(2);
-    
     const toast = document.createElement('div');
     toast.className = 'toast';
     toast.innerHTML = `💸 Retiro exitoso para <b>${randomUser}</b> por <b>${randomAmount} USDT</b>`;
-    
     container.appendChild(toast);
-    
-    setTimeout(() => {
-        if (toast.parentNode) toast.remove();
-    }, 4500);
+    setTimeout(() => { if (toast.parentNode) toast.remove(); }, 4500);
 }
-
-setTimeout(() => {
-    showFakeWithdrawal();
-    setInterval(showFakeWithdrawal, 30000); 
-}, 5000);
+setTimeout(() => { showFakeWithdrawal(); setInterval(showFakeWithdrawal, 30000); }, 5000);
 
 // --- FUNCIONES BASE ---
 function showToast(message, isError = false) {
@@ -103,9 +87,7 @@ function getReferralLink() {
 function createTaskHTML(task, completed) {
     const isBotTask = task.link.includes('bot?start=') || task.link.includes('Bot?start=') || task.link.includes('bot');
     const iconUrl = isBotTask ? ROBOT_ICON : MEGAFONO_ICON;
-    
     let buttonHTML = '';
-
     if (completed) {
         buttonHTML = `<button class="btn-claim" disabled style="opacity:0.5; background:#333; color:#888;">Completado</button>`;
     } else {
@@ -118,7 +100,6 @@ function createTaskHTML(task, completed) {
             buttonHTML = `<button class="btn-claim" style="${btnColor}" onclick="joinAndWait('${task.link}', ${task.id})">${btnText}</button>`;
         }
     }
-
     return `
         <div class="task-card">
             <img src="${iconUrl}" class="task-icon-img" alt="Icon">
@@ -133,11 +114,8 @@ function createTaskHTML(task, completed) {
 
 function loadUserData() {
     if (!userId) return;
-    
     fetch(`/api/user/${userId}`).then(res => res.json()).then(data => {
-        // BLINDAJE CONTRA EL NaN
         const safeBalance = (data && data.balance !== undefined && data.balance !== null && !isNaN(data.balance)) ? data.balance : 0.00;
-        
         animateValue('balance', 0, safeBalance, 1500);
         document.getElementById('withdraw-balance').innerText = safeBalance.toFixed(2);
         const receiveAmount = Math.max(0, safeBalance); 
@@ -145,9 +123,6 @@ function loadUserData() {
         document.getElementById('ref-link-text').innerText = getReferralLink();
         document.getElementById('total-refs').innerText = data.referidos || 0;
         document.getElementById('total-earned').innerText = ((data.referidos || 0) * 1.5).toFixed(2) + ' USDT';
-
-        // SE ELIMINÓ EL AVISO DE 24 HORAS AQUÍ
-
     }).catch(err => console.log(err));
     
     fetch('/api/ranking').then(res => res.json()).then(data => {
@@ -160,11 +135,9 @@ function loadUserData() {
     fetch(`/api/tasks/${userId}`).then(res => res.json()).then(data => {
         const tasksContainer = document.getElementById('tasks-container');
         const homeTasksContainer = document.getElementById('home-tasks-container');
-        
         if (data.tasks && data.tasks.length > 0) {
             let tasksHTML = '';
             let homeTasksHTML = '';
-
             data.tasks.forEach(task => {
                 const completed = data.completedIds.includes(task.id);
                 const taskHtml = createTaskHTML(task, completed);
@@ -172,13 +145,15 @@ function loadUserData() {
                 const isBotTask = task.link.includes('bot?start=') || task.link.includes('Bot?start=') || task.link.includes('bot');
                 if (!isBotTask) homeTasksHTML += taskHtml;
             });
-
             tasksContainer.innerHTML = tasksHTML;
             homeTasksContainer.innerHTML = homeTasksHTML;
         } else {
             tasksContainer.innerHTML = `<p style="text-align:center; color:#889988; margin-top:20px;">No hay tareas disponibles ahora.</p>`;
         }
     }).catch(err => console.log(err));
+
+    // Actualizamos el contador de anuncios al cargar los datos
+    updateAdCounter();
 }
 
 function joinAndWait(link, taskId) {
@@ -263,4 +238,78 @@ function requestWithdraw() {
     });
 }
 
+// ==========================================
+// --- NUEVA LÓGICA DE MONETAG (ANUNCIOS) ---
+// ==========================================
+
+// Función para actualizar el contador visual (0/5)
+function updateAdCounter() {
+    if (!userId) return;
+    fetch(`/api/ads-status/${userId}`).then(res => res.json()).then(data => {
+        const counterEl = document.getElementById('ads-seen-count');
+        if (counterEl) counterEl.innerText = data.count;
+        
+        const btn = document.getElementById('watch-ad-btn');
+        if (btn) {
+            if (data.count >= 5) {
+                btn.innerText = 'Límite';
+                btn.disabled = true;
+                btn.style.background = '#333';
+                btn.style.color = '#888';
+                btn.style.boxShadow = 'none';
+            } else {
+                btn.innerText = 'Ver Video';
+                btn.disabled = false;
+                btn.style.background = 'linear-gradient(135deg, #00ff88, #00cc6a)';
+                btn.style.color = '#000';
+                btn.style.boxShadow = '0 4px 15px rgba(0, 255, 136, 0.3)';
+            }
+        }
+    }).catch(e => console.log(e));
+}
+
+// Función que se ejecuta al tocar "Ver Video"
+async function watchAd() {
+    if (!userId) return showToast("Abre esto desde Telegram", true);
+    
+    const btn = document.getElementById('watch-ad-btn');
+    btn.innerText = 'Cargando...';
+    btn.disabled = true;
+
+    try {
+        // --- AQUÍ INTEGRAMOS EL CÓDIGO DE MONETAG ---
+        // Nota: Si el script de Monetag no está cargado (porque estás probando), 
+        // simulamos el anuncio con un temporizador de 3 segundos.
+        if (typeof show_12149061 !== 'undefined') {
+            await show_12149061('pop'); // <-- Código de Monetag
+        } else {
+            await new Promise(resolve => setTimeout(resolve, 3000)); 
+        }
+        
+        // Si el usuario vio el anuncio completo, le pedimos al servidor que le pague
+        fetch('/api/watch-ad', {
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId })
+        }).then(res => res.json()).then(data => {
+            if(data.success) {
+                showToast(`✅ ¡Ganaste ${data.reward} USDT!`);
+                loadUserData(); // Recargar saldo y contador
+            } else {
+                showToast(data.error, true);
+                updateAdCounter();
+            }
+        });
+
+    } catch (e) {
+        // El usuario cerró el anuncio antes de tiempo
+        showToast('❌ Debes ver el anuncio completo para ganar.', true);
+        updateAdCounter();
+    }
+}
+
+// Iniciar el contador por primera vez al cargar la app
+updateAdCounter();
+
+// Asegurarnos de que loadUserData se ejecute al final
 loadUserData();
