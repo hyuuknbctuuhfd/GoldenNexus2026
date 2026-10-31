@@ -167,7 +167,7 @@ app.get('/api/ads-status/:userId', (req, res) => {
 // Ruta para pagar al usuario por ver el anuncio
 app.post('/api/watch-ad', (req, res) => {
     const { userId } = req.body;
-    const reward = 1.50; // <--- CAMBIADO A 1.50 USDT
+    const reward = 0.30; // <-- 0.30 x 5 videos = 1.50 USDT total
 
     // Doble verificación en el servidor
     db.get(`SELECT COUNT(*) as count FROM ad_views WHERE user_id = ? AND viewed_at >= datetime('now', '-2 hours')`, [userId], (err, row) => {
@@ -179,7 +179,18 @@ app.post('/api/watch-ad', (req, res) => {
         
         db.run(`UPDATE users SET balance = balance + ? WHERE id = ?`, [reward, userId], function(err) {
             if (err) return res.status(500).json({ error: 'Error al guardar la recompensa' });
-            res.json({ success: true, reward: reward });
+            
+            // Calculamos cuántos videos ha visto en este ciclo
+            const videosVistos = row.count + 1;
+            
+            let mensaje = `✅ ¡Ganaste ${reward} USDT!`;
+            if (videosVistos === 5) {
+                mensaje = `🎉 ¡Felicidades! Has completado los 5 videos y acumulado 1.50 USDT en total.`;
+            } else {
+                mensaje += ` (Llevas ${(videosVistos * reward).toFixed(2)} USDT de los 1.50)`;
+            }
+
+            res.json({ success: true, reward: reward, message: mensaje });
         });
     });
 });
