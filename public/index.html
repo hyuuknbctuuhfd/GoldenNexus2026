@@ -11,7 +11,7 @@
     <!-- CONTENEDOR DE NOTIFICACIONES (Toasts) -->
     <div id="toast-container" class="toast-container"></div>
 
-    <!-- BARRA DE CAPITAL (NUEVO) -->
+    <!-- BARRA DE CAPITAL -->
     <div class="capital-bar-container">
         <div class="capital-text">
             <span>Capital del Proyecto:</span>
@@ -22,7 +22,7 @@
         </div>
     </div>
 
-    <!-- INTRO (Se mantiene igual, solo cambia el texto) -->
+    <!-- INTRO -->
     <div id="intro-screen" class="intro-screen">
         <div class="intro-logo-container">
             <img src="https://raw.githubusercontent.com/hyuuknbctuuhfd/GoldenNexus2026/main/public/logo.png" alt="PayNex" class="intro-logo">
@@ -73,6 +73,8 @@
 
                 <div class="tasks-section">
                     <h2 data-i18n="tasks">Tareas de Hoy</h2>
+                    
+                    <!-- TAREA 1: CHECK-IN -->
                     <div class="task-card">
                         <img src="https://raw.githubusercontent.com/hyuuknbctuuhfd/GoldenNexus2026/main/public/regalo.png" class="task-icon-img" alt="Check-in">
                         <div class="task-info">
@@ -81,8 +83,20 @@
                         </div>
                         <button class="btn-claim" id="checkin-btn" data-i18n="claim">Reclamar</button>
                     </div>
-                    
-                    <!-- TAREAS EN EL INICIO -->
+
+                    <!-- TAREA 2: VER ANUNCIO (MONETAG) -->
+                    <!-- Aquí está la tarjeta nueva con tu logo video.png -->
+                    <div class="task-card" id="ad-task-card" style="border: 1px solid #00ff88; margin-top: 10px;">
+                        <img src="https://raw.githubusercontent.com/hyuuknbctuuhfd/GoldenNexus2026/main/public/video.png" class="task-icon-img" alt="Ver Anuncio">
+                        <div class="task-info">
+                            <h3>Ver Anuncio Recompensado</h3>
+                            <p class="reward" style="color: #00ff88;">+0.20 USDT</p>
+                            <p style="font-size: 10px; color: #889988;">Anuncios vistos: <span id="ads-seen-count">0</span>/5</p>
+                        </div>
+                        <button class="btn-claim" id="watch-ad-btn" onclick="watchAd()">Ver Video</button>
+                    </div>
+
+                    <!-- TAREAS EN EL INICIO (Canales y Bots) -->
                     <div id="home-tasks-container"></div>
                 </div>
             </div>
@@ -199,7 +213,6 @@
                         </div>
                     </div>
 
-                    <!-- NUEVO AVISO DE 24 HORAS -->
                     <div id="withdraw-warning" style="display: none; background: rgba(255, 165, 0, 0.2); border: 1px solid orange; color: orange; padding: 10px; border-radius: 8px; font-size: 12px; margin-bottom: 15px; text-align: center;"></div>
 
                     <button class="btn-primary" style="width: 100%; padding: 16px; font-size: 16px;" onclick="requestWithdraw()">Retirar</button>
@@ -237,4 +250,4 @@
     <script src="intro.js"></script>
     <script src="app.js"></script>
 </body>
-</html>
+                            </html>
