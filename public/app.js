@@ -277,13 +277,11 @@ async function watchAd() {
     btn.disabled = true;
 
     try {
-        // --- AQUÍ INTEGRAMOS EL CÓDIGO DE MONETAG ---
-        // Nota: Si el script de Monetag no está cargado (porque estás probando), 
-        // simulamos el anuncio con un temporizador de 3 segundos.
-        if (typeof show_12149061 !== 'undefined') {
-            await show_12149061('pop'); // <-- Código de Monetag
+        // --- CÓDIGO REAL DE MONETAG (SIN SIMULACROS) ---
+        if (typeof show_12149061 === 'function') {
+            await show_12149061('pop'); 
         } else {
-            await new Promise(resolve => setTimeout(resolve, 3000)); 
+            throw new Error("El script de Monetag no está cargado.");
         }
         
         // Si el usuario vio el anuncio completo, le pedimos al servidor que le pague
@@ -302,7 +300,8 @@ async function watchAd() {
         });
 
     } catch (e) {
-        // El usuario cerró el anuncio antes de tiempo
+        // El usuario cerró el anuncio antes de tiempo o el script no cargó
+        console.error("Error Monetag:", e);
         showToast('❌ Debes ver el anuncio completo para ganar.', true);
         updateAdCounter();
     }
