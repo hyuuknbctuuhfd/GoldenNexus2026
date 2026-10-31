@@ -167,7 +167,7 @@ app.get('/api/ads-status/:userId', (req, res) => {
 // Ruta para pagar al usuario por ver el anuncio
 app.post('/api/watch-ad', (req, res) => {
     const { userId } = req.body;
-    const reward = 0.20;
+    const reward = 1.50; // <--- CAMBIADO A 1.50 USDT
 
     // Doble verificación en el servidor
     db.get(`SELECT COUNT(*) as count FROM ad_views WHERE user_id = ? AND viewed_at >= datetime('now', '-2 hours')`, [userId], (err, row) => {
