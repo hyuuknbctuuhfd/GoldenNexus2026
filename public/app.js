@@ -152,7 +152,6 @@ function loadUserData() {
         }
     }).catch(err => console.log(err));
 
-    // Actualizamos el contador de anuncios al cargar los datos
     updateAdCounter();
 }
 
@@ -239,10 +238,9 @@ function requestWithdraw() {
 }
 
 // ==========================================
-// --- NUEVA LÓGICA DE MONETAG (ANUNCIOS) ---
+// --- LÓGICA DE MONETAG (ANUNCIOS) ---
 // ==========================================
 
-// Función para actualizar el contador visual (0/5)
 function updateAdCounter() {
     if (!userId) return;
     fetch(`/api/ads-status/${userId}`).then(res => res.json()).then(data => {
@@ -268,7 +266,6 @@ function updateAdCounter() {
     }).catch(e => console.log(e));
 }
 
-// Función que se ejecuta al tocar "Ver Video"
 async function watchAd() {
     if (!userId) return showToast("Abre esto desde Telegram", true);
     
@@ -277,22 +274,21 @@ async function watchAd() {
     btn.disabled = true;
 
     try {
-        // --- CÓDIGO REAL DE MONETAG (SIN SIMULACROS) ---
         if (typeof show_12149061 === 'function') {
             await show_12149061('pop'); 
         } else {
             throw new Error("El script de Monetag no está cargado.");
         }
         
-        // Si el usuario vio el anuncio completo, le pedimos al servidor que le pague
         fetch('/api/watch-ad', {
             method: 'POST', 
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId })
         }).then(res => res.json()).then(data => {
             if(data.success) {
-                showToast(`✅ ¡Ganaste ${data.reward} USDT!`);
-                loadUserData(); // Recargar saldo y contador
+                // Mostramos el mensaje dinámico del servidor (llevas X de 1.50)
+                showToast(data.message);
+                loadUserData();
             } else {
                 showToast(data.error, true);
                 updateAdCounter();
@@ -300,15 +296,11 @@ async function watchAd() {
         });
 
     } catch (e) {
-        // El usuario cerró el anuncio antes de tiempo o el script no cargó
         console.error("Error Monetag:", e);
         showToast('❌ Debes ver el anuncio completo para ganar.', true);
         updateAdCounter();
     }
 }
 
-// Iniciar el contador por primera vez al cargar la app
 updateAdCounter();
-
-// Asegurarnos de que loadUserData se ejecute al final
 loadUserData();
