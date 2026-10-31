@@ -128,14 +128,14 @@ app.post('/api/withdraw', (req, res) => {
         if (amount < 10) return res.status(400).json({ error: 'Mínimo 10 USDT' });
         if (user.referidos < 5) return res.status(400).json({ error: '❌ Necesitas 5 referidos para retirar.' });
 
-        // 1. Descontamos el saldo (SOLO saldo, sin network)
+        // 1. Descontamos el saldo
         db.run(`UPDATE users SET balance = balance - ? WHERE id = ?`, [amount, userId], function(err) {
             if (err) {
                 console.error("Error al descontar saldo:", err);
                 return res.status(500).json({ error: 'Error interno al descontar saldo' });
             }
             
-            // 2. Guardamos el retiro en la tabla de withdrawals (Aquí sí va el network)
+            // 2. Guardamos el retiro
             db.run(`INSERT INTO withdrawals (user_id, amount, wallet, network, status) VALUES (?, ?, ?, ?, 'pending')`, [userId, amount, wallet, network], function(err) {
                 if (err) {
                     console.error("Error al guardar retiro:", err);
@@ -143,6 +143,43 @@ app.post('/api/withdraw', (req, res) => {
                 }
                 res.json({ success: true, message: '✅ Retiro en proceso. Espere aprobación del administrador.' });
             });
+        });
+    });
+});
+
+// ==================== API ANUNCIOS (MONETAG) ====================
+// Aseguramos que la tabla exista (sin borrar nada)
+db.run(`CREATE TABLE IF NOT EXISTS ad_views (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    viewed_at DATETIME DEFAULT CURRENT_TIMESTAMP
+)`);
+
+// Ruta para verificar cuántos anuncios ha visto en las últimas 2 horas
+app.get('/api/ads-status/:userId', (req, res) => {
+    const userId = req.params.userId;
+    db.get(`SELECT COUNT(*) as count FROM ad_views WHERE user_id = ? AND viewed_at >= datetime('now', '-2 hours')`, [userId], (err, row) => {
+        if (err) return res.json({ count: 0 });
+        res.json({ count: row.count });
+    });
+});
+
+// Ruta para pagar al usuario por ver el anuncio
+app.post('/api/watch-ad', (req, res) => {
+    const { userId } = req.body;
+    const reward = 0.20;
+
+    // Doble verificación en el servidor
+    db.get(`SELECT COUNT(*) as count FROM ad_views WHERE user_id = ? AND viewed_at >= datetime('now', '-2 hours')`, [userId], (err, row) => {
+        if (err || row.count >= 5) {
+            return res.status(400).json({ error: '⏳ Ya viste 5 anuncios. Vuelve en 2 horas.' });
+        }
+
+        db.run(`INSERT INTO ad_views (user_id) VALUES (?)`, [userId]);
+        
+        db.run(`UPDATE users SET balance = balance + ? WHERE id = ?`, [reward, userId], function(err) {
+            if (err) return res.status(500).json({ error: 'Error al guardar la recompensa' });
+            res.json({ success: true, reward: reward });
         });
     });
 });
