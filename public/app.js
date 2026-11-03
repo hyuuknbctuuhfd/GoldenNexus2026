@@ -151,8 +151,6 @@ function loadUserData() {
             tasksContainer.innerHTML = `<p style="text-align:center; color:#889988; margin-top:20px;">No hay tareas disponibles ahora.</p>`;
         }
     }).catch(err => console.log(err));
-
-    updateAdCounter();
 }
 
 function joinAndWait(link, taskId) {
@@ -238,33 +236,8 @@ function requestWithdraw() {
 }
 
 // ==========================================
-// --- LÓGICA DE ADSGRAM (NUEVOS ANUNCIOS) ---
+// --- LÓGICA DE ADSGRAM (ANUNCIOS) ---
 // ==========================================
-
-function updateAdCounter() {
-    if (!userId) return;
-    fetch(`/api/ads-status/${userId}`).then(res => res.json()).then(data => {
-        const counterEl = document.getElementById('ads-seen-count');
-        if (counterEl) counterEl.innerText = data.count;
-        
-        const btn = document.getElementById('watch-ad-btn');
-        if (btn) {
-            if (data.count >= 5) {
-                btn.innerText = 'Límite';
-                btn.disabled = true;
-                btn.style.background = '#333';
-                btn.style.color = '#888';
-                btn.style.boxShadow = 'none';
-            } else {
-                btn.innerText = 'Ver Video';
-                btn.disabled = false;
-                btn.style.background = 'linear-gradient(135deg, #00ff88, #00cc6a)';
-                btn.style.color = '#000';
-                btn.style.boxShadow = '0 4px 15px rgba(0, 255, 136, 0.3)';
-            }
-        }
-    }).catch(e => console.log(e));
-}
 
 // NUEVA FUNCIÓN: El contador de espera
 function startCooldown(seconds) {
@@ -288,7 +261,7 @@ function startCooldown(seconds) {
             btn.style.color = '#000';
             btn.style.boxShadow = '0 4px 15px rgba(0, 255, 136, 0.3)';
             cooldownText.style.display = 'none';
-            loadUserData(); // Recargar datos para actualizar el contador de vistos
+            loadUserData(); 
             return;
         }
 
@@ -309,7 +282,7 @@ async function watchAd() {
     btn.disabled = true;
 
     try {
-        // 1. Pedir permiso al backend (Para validar el límite de 5 cada 2 horas)
+        // 1. Pedir permiso al backend (valida el límite y el bloqueo de 5 min)
         const res = await fetch('/api/tasks/start-ad', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -319,8 +292,19 @@ async function watchAd() {
 
         if (!data.ok) {
             showToast(data.error, true);
-            btn.innerText = 'Ver Video';
-            btn.disabled = false;
+            // Si el backend dice que faltan X minutos, iniciamos el contador visual
+            if (data.error.includes("Espera") || data.error.includes("Límite")) {
+                // Extraemos el tiempo si es posible, o ponemos 5 min por defecto
+                let secondsLeft = 300; // 5 minutos por defecto
+                if (data.error.includes("minutos")) {
+                    const match = data.error.match(/(\d+)\s*minutos/);
+                    if (match) secondsLeft = parseInt(match[1]) * 60;
+                }
+                startCooldown(secondsLeft);
+            } else {
+                btn.innerText = 'Ver Video';
+                btn.disabled = false;
+            }
             return;
         }
 
@@ -329,14 +313,13 @@ async function watchAd() {
         
         adController.show().then((result) => {
             if (result.done) {
-                // ¡Éxito! El usuario vio el anuncio completo
                 tg.HapticFeedback.notificationOccurred('success');
-                showToast("✅ ¡Anuncio completado! El saldo se actualizará en breve.");
+                showToast("✅ ¡Cofre abierto! +0.75 USDT añadidos.");
                 
-                // Iniciar contador visual de 2 horas
-                startCooldown(2 * 60 * 60); 
+                // Iniciar contador visual de 5 minutos entre videos
+                startCooldown(5 * 60); 
                 
-                // Actualizamos el saldo después de un segundo (el backend ya sumó el saldo por el Postback)
+                // Actualizamos el saldo después de un segundo
                 setTimeout(loadUserData, 1500); 
             } else {
                 showToast("❌ No completaste el anuncio.", true);
@@ -358,5 +341,4 @@ async function watchAd() {
     }
 }
 
-updateAdCounter();
 loadUserData();
