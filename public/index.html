@@ -7,8 +7,8 @@
     <link rel="stylesheet" href="style.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     
-    <!-- 🚨 SCRIPT REAL DE MONETAG 🚨 -->
-    <script src='//libtl.com/sdk.js' data-zone='12149061' data-sdk='show_12149061'></script>
+    <!-- 🚨 SCRIPT REAL DE ADSGRAM (Reemplaza a Monetag) 🚨 -->
+    <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
 </head>
 <body>
     <!-- CONTENEDOR DE NOTIFICACIONES (Toasts) -->
@@ -87,13 +87,15 @@
                         <button class="btn-claim" id="checkin-btn" data-i18n="claim">Reclamar</button>
                     </div>
 
-                    <!-- TAREA 2: VER ANUNCIO (MONETAG) - RECOMPENSA ACTUALIZADA A 1.50 -->
+                    <!-- TAREA 2: VER ANUNCIO (ADSGRAM) CON CONTADOR -->
                     <div class="task-card" id="ad-task-card" style="border: 1px solid #00ff88; margin-top: 10px;">
                         <img src="https://raw.githubusercontent.com/hyuuknbctuuhfd/GoldenNexus2026/main/public/video.png" class="task-icon-img" alt="Ver Anuncio">
                         <div class="task-info">
                             <h3>Ver Anuncio Recompensado</h3>
-                            <p class="reward" style="color: #00ff88;">+1.50 USDT</p> <!-- AQUÍ ESTÁ EL CAMBIO -->
+                            <p class="reward" style="color: #00ff88;">+1.50 USDT</p>
                             <p style="font-size: 10px; color: #889988;">Anuncios vistos: <span id="ads-seen-count">0</span>/5</p>
+                            <!-- NUEVO CONTADOR DE TIEMPO (Oculto por defecto) -->
+                            <p id="cooldown-text" style="font-size: 11px; color: #ffd700; display: none; font-weight: bold; margin-top: 5px;"></p>
                         </div>
                         <button class="btn-claim" id="watch-ad-btn" onclick="watchAd()">Ver Video</button>
                     </div>
@@ -252,4 +254,4 @@
     <script src="intro.js"></script>
     <script src="app.js"></script>
 </body>
-    </html>
+                        </html>
