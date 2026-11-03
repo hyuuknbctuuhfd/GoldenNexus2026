@@ -147,50 +147,59 @@ app.post('/api/withdraw', (req, res) => {
     });
 });
 
-// ==================== API ANUNCIOS (MONETAG) ====================
-// Aseguramos que la tabla exista (sin borrar nada)
+// ==================== API ANUNCIOS (ADSGRAM) ====================
+
+// Aseguramos que la tabla exista con la estructura correcta
 db.run(`CREATE TABLE IF NOT EXISTS ad_views (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER,
-    viewed_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    created_at INTEGER
 )`);
 
-// Ruta para verificar cuántos anuncios ha visto en las últimas 2 horas
-app.get('/api/ads-status/:userId', (req, res) => {
-    const userId = req.params.userId;
-    db.get(`SELECT COUNT(*) as count FROM ad_views WHERE user_id = ? AND viewed_at >= datetime('now', '-2 hours')`, [userId], (err, row) => {
-        if (err) return res.json({ count: 0 });
-        res.json({ count: row.count });
+// 1. Ruta para verificar si puede ver el anuncio (límite de 5 cada 2 horas)
+app.post('/api/tasks/start-ad', (req, res) => {
+    const { userId } = req.body;
+    if (!userId) return res.status(401).json({ ok: false, error: 'Usuario no válido' });
+
+    const now = Math.floor(Date.now() / 1000);
+    const twoHoursAgo = now - 7200; // 2 horas en segundos
+
+    // Contamos cuántos anuncios ha visto en las últimas 2 horas
+    db.get(`SELECT COUNT(*) as cnt FROM ad_views WHERE user_id = ? AND created_at > ?`, [userId, twoHoursAgo], (err, row) => {
+        if (err) return res.status(500).json({ ok: false, error: 'Error DB' });
+        
+        if (row.cnt >= 5) {
+            // Si ya vio 5, calculamos cuánto tiempo le falta para que se libere el primero
+            db.get(`SELECT created_at FROM ad_views WHERE user_id = ? AND created_at > ? ORDER BY created_at ASC LIMIT 1`, [userId, twoHoursAgo], (err, firstView) => {
+                const timeLeft = (firstView.created_at + 7200) - now;
+                return res.json({ ok: false, error: `Límite alcanzado. Vuelve en ${Math.ceil(timeLeft/60)} minutos.` });
+            });
+        } else {
+            res.json({ ok: true, user_id: userId });
+        }
     });
 });
 
-// Ruta para pagar al usuario por ver el anuncio
-app.post('/api/watch-ad', (req, res) => {
-    const { userId } = req.body;
-    const reward = 0.30; // <-- 0.30 x 5 videos = 1.50 USDT total
+// 2. POSTBACK DE ADSGRAM (Aquí llega el pago real)
+app.get('/reward', (req, res) => {
+    const userId = req.query.userid; 
+    if (!userId) return res.status(400).send('Falta userid');
 
-    // Doble verificación en el servidor
-    db.get(`SELECT COUNT(*) as count FROM ad_views WHERE user_id = ? AND viewed_at >= datetime('now', '-2 hours')`, [userId], (err, row) => {
-        if (err || row.count >= 5) {
-            return res.status(400).json({ error: '⏳ Ya viste 5 anuncios. Vuelve en 2 horas.' });
-        }
+    const reward = 1.50; // Pago por ver el video completo
+    const now = Math.floor(Date.now() / 1000);
 
-        db.run(`INSERT INTO ad_views (user_id) VALUES (?)`, [userId]);
-        
-        db.run(`UPDATE users SET balance = balance + ? WHERE id = ?`, [reward, userId], function(err) {
-            if (err) return res.status(500).json({ error: 'Error al guardar la recompensa' });
-            
-            // Calculamos cuántos videos ha visto en este ciclo
-            const videosVistos = row.count + 1;
-            
-            let mensaje = `✅ ¡Ganaste ${reward} USDT!`;
-            if (videosVistos === 5) {
-                mensaje = `🎉 ¡Felicidades! Has completado los 5 videos y acumulado 1.50 USDT en total.`;
-            } else {
-                mensaje += ` (Llevas ${(videosVistos * reward).toFixed(2)} USDT de los 1.50)`;
+    db.serialize(() => {
+        db.run(`BEGIN`);
+        db.run(`INSERT INTO ad_views (user_id, created_at) VALUES (?, ?)`, [userId, now]);
+        db.run(`UPDATE users SET balance = balance + ? WHERE id = ?`, [reward, userId]);
+        db.run(`COMMIT`, (err) => {
+            if (err) {
+                db.run(`ROLLBACK`);
+                return res.status(500).send('Error DB');
             }
-
-            res.json({ success: true, reward: reward, message: mensaje });
+            // Notificar al usuario por Telegram
+            bot.telegram.sendMessage(userId, `💰 +${reward} USDT acreditados por ver un anuncio en PayNex.`).catch(()=>{});
+            res.status(200).send('ok');
         });
     });
 });
