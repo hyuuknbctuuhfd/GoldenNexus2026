@@ -117,7 +117,7 @@ app.post('/api/checkin', (req, res) => {
     });
 });
 
-// ==================== API RETIRO (CORREGIDO) ====================
+// ==================== API RETIRO ====================
 app.post('/api/withdraw', (req, res) => {
     const { userId, amount, wallet, network } = req.body;
     
@@ -128,19 +128,11 @@ app.post('/api/withdraw', (req, res) => {
         if (amount < 10) return res.status(400).json({ error: 'Mínimo 10 USDT' });
         if (user.referidos < 5) return res.status(400).json({ error: '❌ Necesitas 5 referidos para retirar.' });
 
-        // 1. Descontamos el saldo
         db.run(`UPDATE users SET balance = balance - ? WHERE id = ?`, [amount, userId], function(err) {
-            if (err) {
-                console.error("Error al descontar saldo:", err);
-                return res.status(500).json({ error: 'Error interno al descontar saldo' });
-            }
+            if (err) return res.status(500).json({ error: 'Error interno al descontar saldo' });
             
-            // 2. Guardamos el retiro
             db.run(`INSERT INTO withdrawals (user_id, amount, wallet, network, status) VALUES (?, ?, ?, ?, 'pending')`, [userId, amount, wallet, network], function(err) {
-                if (err) {
-                    console.error("Error al guardar retiro:", err);
-                    return res.status(500).json({ error: 'Error interno al guardar retiro' });
-                }
+                if (err) return res.status(500).json({ error: 'Error interno al guardar retiro' });
                 res.json({ success: true, message: '✅ Retiro en proceso. Espere aprobación del administrador.' });
             });
         });
@@ -149,43 +141,55 @@ app.post('/api/withdraw', (req, res) => {
 
 // ==================== API ANUNCIOS (ADSGRAM) ====================
 
-// Aseguramos que la tabla exista con la estructura correcta
+// Aseguramos que la tabla exista
 db.run(`CREATE TABLE IF NOT EXISTS ad_views (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER,
     created_at INTEGER
 )`);
 
-// 1. Ruta para verificar si puede ver el anuncio (límite de 5 cada 2 horas)
+// Ruta para verificar si puede ver el anuncio (Límite 5 cada 2 horas + 5 min entre videos)
 app.post('/api/tasks/start-ad', (req, res) => {
     const { userId } = req.body;
     if (!userId) return res.status(401).json({ ok: false, error: 'Usuario no válido' });
 
     const now = Math.floor(Date.now() / 1000);
-    const twoHoursAgo = now - 7200; // 2 horas en segundos
+    const twoHoursAgo = now - 7200; // 2 horas para el límite total
+    const fiveMinutesAgo = now - 300; // 5 minutos para el bloqueo entre videos
 
-    // Contamos cuántos anuncios ha visto en las últimas 2 horas
-    db.get(`SELECT COUNT(*) as cnt FROM ad_views WHERE user_id = ? AND created_at > ?`, [userId, twoHoursAgo], (err, row) => {
+    // 1. Verificamos cuántos videos vio en las últimas 2 horas
+    db.get(`SELECT COUNT(*) as total FROM ad_views WHERE user_id = ? AND created_at > ?`, [userId, twoHoursAgo], (err, rowTotal) => {
         if (err) return res.status(500).json({ ok: false, error: 'Error DB' });
-        
-        if (row.cnt >= 5) {
-            // Si ya vio 5, calculamos cuánto tiempo le falta para que se libere el primero
+
+        if (rowTotal.total >= 5) {
+            // Si ya vio 5, calculamos cuánto falta para que se cumplan las 2 horas desde el primero
             db.get(`SELECT created_at FROM ad_views WHERE user_id = ? AND created_at > ? ORDER BY created_at ASC LIMIT 1`, [userId, twoHoursAgo], (err, firstView) => {
                 const timeLeft = (firstView.created_at + 7200) - now;
                 return res.json({ ok: false, error: `Límite alcanzado. Vuelve en ${Math.ceil(timeLeft/60)} minutos.` });
             });
         } else {
-            res.json({ ok: true, user_id: userId });
+            // 2. Si no ha llegado a 5, verificamos que hayan pasado 5 minutos desde el último
+            db.get(`SELECT COUNT(*) as recent FROM ad_views WHERE user_id = ? AND created_at > ?`, [userId, fiveMinutesAgo], (err, rowRecent) => {
+                if (rowRecent.recent > 0) {
+                    db.get(`SELECT created_at FROM ad_views WHERE user_id = ? AND created_at > ? ORDER BY created_at DESC LIMIT 1`, [userId, fiveMinutesAgo], (err, lastView) => {
+                        const timeLeft = (lastView.created_at + 300) - now;
+                        return res.json({ ok: false, error: `Espera ${Math.ceil(timeLeft/60)} minutos para el próximo video.` });
+                    });
+                } else {
+                    // ¡Todo listo! Puede ver el video
+                    res.json({ ok: true, user_id: userId });
+                }
+            });
         }
     });
 });
 
-// 2. POSTBACK DE ADSGRAM (Aquí llega el pago real)
+// POSTBACK DE ADSGRAM (Aquí llega el pago real)
 app.get('/reward', (req, res) => {
     const userId = req.query.userid; 
     if (!userId) return res.status(400).send('Falta userid');
 
-    const reward = 1.50; // Pago por ver el video completo
+    const reward = 0.75; // Pago por cofre
     const now = Math.floor(Date.now() / 1000);
 
     db.serialize(() => {
@@ -197,7 +201,6 @@ app.get('/reward', (req, res) => {
                 db.run(`ROLLBACK`);
                 return res.status(500).send('Error DB');
             }
-            // Notificar al usuario por Telegram
             bot.telegram.sendMessage(userId, `💰 +${reward} USDT acreditados por ver un anuncio en PayNex.`).catch(()=>{});
             res.status(200).send('ok');
         });
