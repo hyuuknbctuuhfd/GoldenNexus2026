@@ -238,7 +238,7 @@ function requestWithdraw() {
 }
 
 // ==========================================
-// --- LÓGICA DE MONETAG (ANUNCIOS) ---
+// --- LÓGICA DE ADSGRAM (NUEVOS ANUNCIOS) ---
 // ==========================================
 
 function updateAdCounter() {
@@ -266,6 +266,41 @@ function updateAdCounter() {
     }).catch(e => console.log(e));
 }
 
+// NUEVA FUNCIÓN: El contador de espera
+function startCooldown(seconds) {
+    const btn = document.getElementById('watch-ad-btn');
+    const cooldownText = document.getElementById('cooldown-text');
+    
+    btn.disabled = true;
+    btn.innerText = "Límite";
+    btn.style.background = '#333';
+    btn.style.color = '#888';
+    btn.style.boxShadow = 'none';
+    
+    cooldownText.style.display = 'block';
+
+    const interval = setInterval(() => {
+        if (seconds <= 0) {
+            clearInterval(interval);
+            btn.disabled = false;
+            btn.innerText = "Ver Video";
+            btn.style.background = 'linear-gradient(135deg, #00ff88, #00cc6a)';
+            btn.style.color = '#000';
+            btn.style.boxShadow = '0 4px 15px rgba(0, 255, 136, 0.3)';
+            cooldownText.style.display = 'none';
+            loadUserData(); // Recargar datos para actualizar el contador de vistos
+            return;
+        }
+
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const secs = seconds % 60;
+
+        cooldownText.innerText = `⏳ Próximo video en: ${hours}h ${minutes}m ${secs}s`;
+        seconds--;
+    }, 1000);
+}
+
 async function watchAd() {
     if (!userId) return showToast("Abre esto desde Telegram", true);
     
@@ -274,31 +309,52 @@ async function watchAd() {
     btn.disabled = true;
 
     try {
-        if (typeof show_12149061 === 'function') {
-            await show_12149061('pop'); 
-        } else {
-            throw new Error("El script de Monetag no está cargado.");
-        }
-        
-        fetch('/api/watch-ad', {
-            method: 'POST', 
+        // 1. Pedir permiso al backend (Para validar el límite de 5 cada 2 horas)
+        const res = await fetch('/api/tasks/start-ad', {
+            method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId })
-        }).then(res => res.json()).then(data => {
-            if(data.success) {
-                // Mostramos el mensaje dinámico del servidor (llevas X de 1.50)
-                showToast(data.message);
-                loadUserData();
+            body: JSON.stringify({ initData: tg.initData, userId: userId })
+        });
+        const data = await res.json();
+
+        if (!data.ok) {
+            showToast(data.error, true);
+            btn.innerText = 'Ver Video';
+            btn.disabled = false;
+            return;
+        }
+
+        // 2. Mostrar el anuncio de Adsgram (Block ID: 57696)
+        const adController = window.Adsgram.init({ blockId: "57696" });
+        
+        adController.show().then((result) => {
+            if (result.done) {
+                // ¡Éxito! El usuario vio el anuncio completo
+                tg.HapticFeedback.notificationOccurred('success');
+                showToast("✅ ¡Anuncio completado! El saldo se actualizará en breve.");
+                
+                // Iniciar contador visual de 2 horas
+                startCooldown(2 * 60 * 60); 
+                
+                // Actualizamos el saldo después de un segundo (el backend ya sumó el saldo por el Postback)
+                setTimeout(loadUserData, 1500); 
             } else {
-                showToast(data.error, true);
-                updateAdCounter();
+                showToast("❌ No completaste el anuncio.", true);
+                btn.disabled = false;
+                btn.innerText = 'Ver Video';
             }
+        }).catch((error) => {
+            console.error("Adsgram Error:", error);
+            showToast("Error al cargar el anuncio. Intenta de nuevo.", true);
+            btn.disabled = false;
+            btn.innerText = 'Ver Video';
         });
 
     } catch (e) {
-        console.error("Error Monetag:", e);
-        showToast('❌ Debes ver el anuncio completo para ganar.', true);
-        updateAdCounter();
+        console.error("Error general:", e);
+        showToast('❌ Hubo un error de conexión.', true);
+        btn.innerText = 'Ver Video';
+        btn.disabled = false;
     }
 }
 
