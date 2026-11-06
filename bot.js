@@ -9,6 +9,11 @@ bot.start((ctx) => {
     const username = ctx.from.username || 'Usuario';
     const referidorId = ctx.startPayload ? parseInt(ctx.startPayload) : null;
 
+    // 🚨 DETECCIÓN DEL BOTÓN DE PUBLICIDAD B2B 🚨
+    if (ctx.startPayload === 'publicidad') {
+        return ctx.reply('Bienvenido a PayNex. Si desea publicitar su bot o canal con nosotros, envíe un solo mensaje con:\n\n1. Nombre de su proyecto.\n2. Su @usuario.\n3. Presupuesto.\n4. Breve descripción.\n\nNuestro equipo comercial evaluará su propuesta y le contactará si hay interés.');
+    }
+
     db.get(`SELECT * FROM users WHERE id = ?`, [userId], (err, row) => {
         if (row && row.banned === 1) return ctx.reply('🚫 Has sido expulsado del bot.');
 
@@ -23,7 +28,7 @@ bot.start((ctx) => {
             }
         }
 
-        // MENSAJE DE BIENVENIDA PREMIUM (Cambiado a PAYNEX)
+        // MENSAJE DE BIENVENIDA PREMIUM
         const welcomeMessage = `
 <b>✨ ¡BIENVENIDO A PAYNEX! ✨</b>
 
@@ -45,12 +50,36 @@ Toca el botón de abajo para abrir tu billetera y ver las tareas disponibles.
             reply_markup: {
                 inline_keyboard: [
                     [{ text: '🚀 Abrir PayNex', web_app: { url: process.env.MINI_APP_URL } }],
-                    [{ text: '🔗 ¿Cómo gano referidos?', callback_data: 'how_to_refer' }], // NUEVO BOTÓN
+                    [{ text: '🔗 ¿Cómo gano referidos?', callback_data: 'how_to_refer' }],
                     [{ text: '🌐 Cambiar Idioma', callback_data: 'change_language' }]
                 ]
             }
         });
     });
+});
+
+// ==================== 🚨 BUZÓN CIEGO B2B (RECIBIR PROPUESTAS) 🚨 ====================
+bot.on('text', async (ctx) => {
+    // Ignorar comandos y mensajes que no vengan de chats privados
+    if (ctx.message.text.startsWith('/') || ctx.chat.type !== 'private') return;
+
+    // Filtro simple para detectar que es una propuesta comercial
+    if (ctx.message.text.includes('Presupuesto') || ctx.message.text.includes('presupuesto') || ctx.message.text.includes('@')) {
+        
+        // Reemplaza esto con tu ID personal de Telegram (el tuyo real, no el del bot)
+        const TU_ID_ADMIN = process.env.ADMIN_ID || '6667062973'; 
+        
+        try {
+            // Reenvía la propuesta a tu cuenta personal
+            await ctx.telegram.forwardMessage(TU_ID_ADMIN, ctx.chat.id, ctx.message.message_id);
+            
+            // Respuesta formal al anunciante
+            ctx.reply('✅ Propuesta recibida. Nuestro equipo la revisará. Si encaja con nuestros intereses, nos pondremos en contacto con usted a la brevedad. Gracias.');
+        } catch (error) {
+            console.error("Error al reenviar propuesta:", error);
+            ctx.reply('Hubo un error al enviar su propuesta. Por favor, inténtelo más tarde.');
+        }
+    }
 });
 
 // ==================== ACCIÓN: MOSTRAR GRUPOS DE SPAM ====================
@@ -171,7 +200,7 @@ bot.on('web_app_data', async (ctx) => {
                 db.get(`SELECT * FROM completed_tasks WHERE user_id = ? AND task_id = ?`, [userId, taskId], (err, completed) => {
                     if (completed) return ctx.reply('⚠️ Ya completaste esta tarea.');
                     
-                    // PAGAMOS DIRECTAMENTE (Sin verificar en Telegram)
+                    // PAGAMOS DIRECTAMENTE
                     db.run(`INSERT INTO completed_tasks (user_id, task_id) VALUES (?, ?)`, [userId, taskId]);
                     db.run(`UPDATE users SET balance = balance + ? WHERE id = ?`, [task.reward, userId]);
                     
