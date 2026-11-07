@@ -337,15 +337,26 @@ async function watchAd() {
         if (typeof show_12149061 === 'function') {
             await show_12149061('pop');
             
-            tg.HapticFeedback.notificationOccurred('success');
-            showToast("✅ ¡Anuncio completado! +0.20 USDT añadidos.");
-            
-            // ACTUALIZAMOS EL CONTADOR (1/10, 2/10...)
-            setTimeout(() => {
-                updateAdCounter();
-                loadUserData();
-            }, 1000); 
+            // AQUÍ AVISAMOS AL SERVIDOR QUE EL VIDEO SE COMPLETÓ
+            const rewardRes = await fetch('/api/watch-ad', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: userId })
+            });
+            const rewardData = await rewardRes.json();
 
+            if (rewardData.success) {
+                tg.HapticFeedback.notificationOccurred('success');
+                showToast(`✅ ¡Anuncio completado! +0.20 USDT añadidos.`);
+                
+                // Actualizamos el contador y el saldo en pantalla
+                setTimeout(() => {
+                    updateAdCounter();
+                    loadUserData();
+                }, 1000);
+            } else {
+                showToast(rewardData.error || "Error al acreditar el saldo.", true);
+            }
         } else {
             throw new Error("El SDK de Monetag no está cargado.");
         }
