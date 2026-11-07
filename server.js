@@ -160,7 +160,40 @@ app.get('/api/ads-status/:userId', (req, res) => {
     });
 });
 
-// 2. Ruta para verificar si puede ver el anuncio (Límite 10 cada 1 hora)
+// 2. NUEVA RUTA: Acreditar el saldo cuando el usuario termina el video (Desde la Mini App)
+app.post('/api/watch-ad', (req, res) => {
+    const { userId } = req.body;
+    if (!userId) return res.status(400).json({ success: false, error: 'Usuario no válido' });
+
+    const now = Math.floor(Date.now() / 1000);
+    const oneHourAgo = now - 3600;
+    const rewardAmount = 0.20;
+
+    // Verificamos que no haya llegado al límite de 10
+    db.get(`SELECT COUNT(*) as total FROM ad_views WHERE user_id = ? AND created_at > ?`, [userId, oneHourAgo], (err, rowTotal) => {
+        if (err) return res.status(500).json({ success: false, error: 'Error DB' });
+        
+        if (rowTotal.total >= 10) {
+            return res.status(400).json({ success: false, error: 'Límite alcanzado. Vuelve en 1 hora.' });
+        }
+
+        // Insertamos la vista y sumamos el saldo
+        db.serialize(() => {
+            db.run(`BEGIN`);
+            db.run(`INSERT INTO ad_views (user_id, created_at) VALUES (?, ?)`, [userId, now]);
+            db.run(`UPDATE users SET balance = balance + ? WHERE id = ?`, [rewardAmount, userId]);
+            db.run(`COMMIT`, (err) => {
+                if (err) {
+                    db.run(`ROLLBACK`);
+                    return res.status(500).json({ success: false, error: 'Error DB' });
+                }
+                res.json({ success: true, reward: rewardAmount });
+            });
+        });
+    });
+});
+
+// 3. Ruta para verificar si puede ver el anuncio (Límite 10 cada 1 hora)
 app.post('/api/tasks/start-ad', (req, res) => {
     const { userId } = req.body;
     if (!userId) return res.status(401).json({ ok: false, error: 'Usuario no válido' });
@@ -182,7 +215,7 @@ app.post('/api/tasks/start-ad', (req, res) => {
     });
 });
 
-// 3. POSTBACK DE MONETAG (Aquí llega el pago real)
+// 4. POSTBACK DE MONETAG (Por si acaso Monetag envía la señal, pero ya no dependemos de ella)
 app.get('/api/monetag/postback', (req, res) => {
     const { user_id, zone, reward, txid } = req.query;
     if (!user_id || !txid) return res.status(400).send('Faltan parámetros');
