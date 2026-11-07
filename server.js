@@ -144,43 +144,52 @@ app.post('/api/withdraw', (req, res) => {
 db.run(`CREATE TABLE IF NOT EXISTS ad_views (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER,
-    created_at INTEGER
+    created_at INTEGER,
+    txid TEXT
 )`);
 
-// Ruta para verificar si puede ver el anuncio (Límite 10 cada 1 hora)
+// 1. Ruta para obtener cuántos videos ha visto el usuario en la última hora (Para el contador 0/10)
+app.get('/api/ads-status/:userId', (req, res) => {
+    const userId = req.params.userId;
+    const now = Math.floor(Date.now() / 1000);
+    const oneHourAgo = now - 3600;
+
+    db.get(`SELECT COUNT(*) as count FROM ad_views WHERE user_id = ? AND created_at > ?`, [userId, oneHourAgo], (err, row) => {
+        if (err) return res.json({ count: 0 });
+        res.json({ count: row.count });
+    });
+});
+
+// 2. Ruta para verificar si puede ver el anuncio (Límite 10 cada 1 hora)
 app.post('/api/tasks/start-ad', (req, res) => {
     const { userId } = req.body;
     if (!userId) return res.status(401).json({ ok: false, error: 'Usuario no válido' });
 
     const now = Math.floor(Date.now() / 1000);
-    const oneHourAgo = now - 3600; // 1 hora para el límite total
+    const oneHourAgo = now - 3600; 
 
-    // Verificamos cuántos videos vio en la última hora
     db.get(`SELECT COUNT(*) as total FROM ad_views WHERE user_id = ? AND created_at > ?`, [userId, oneHourAgo], (err, rowTotal) => {
         if (err) return res.status(500).json({ ok: false, error: 'Error DB' });
 
-        if (rowTotal.total >= 10) { // <--- CAMBIO: Límite de 10 videos
-            // Si ya vio 10, calculamos cuánto falta para que se cumpla la hora desde el primero
+        if (rowTotal.total >= 10) { 
             db.get(`SELECT created_at FROM ad_views WHERE user_id = ? AND created_at > ? ORDER BY created_at ASC LIMIT 1`, [userId, oneHourAgo], (err, firstView) => {
                 const timeLeft = (firstView.created_at + 3600) - now;
                 return res.json({ ok: false, error: `Límite alcanzado. Vuelve en ${Math.ceil(timeLeft/60)} minutos.` });
             });
         } else {
-            // Todo listo, puede ver el video
             res.json({ ok: true, user_id: userId });
         }
     });
 });
 
-// POSTBACK DE MONETAG (Aquí llega el pago real)
+// 3. POSTBACK DE MONETAG (Aquí llega el pago real)
 app.get('/api/monetag/postback', (req, res) => {
     const { user_id, zone, reward, txid } = req.query;
     if (!user_id || !txid) return res.status(400).send('Faltan parámetros');
 
     const now = Math.floor(Date.now() / 1000);
-    const rewardAmount = 0.20; // <--- CAMBIO: 0.20 USDT por video
+    const rewardAmount = 0.20; 
 
-    // Evitar duplicados
     db.get(`SELECT id FROM ad_views WHERE txid = ?`, [txid], (err, existing) => {
         if (existing) return res.status(200).send('duplicate');
 
