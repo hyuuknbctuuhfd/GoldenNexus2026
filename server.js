@@ -139,70 +139,63 @@ app.post('/api/withdraw', (req, res) => {
     });
 });
 
-// ==================== API ANUNCIOS (ADSGRAM) ====================
+// ==================== API ANUNCIOS (MONETAG) ====================
 
-// Aseguramos que la tabla exista
 db.run(`CREATE TABLE IF NOT EXISTS ad_views (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER,
     created_at INTEGER
 )`);
 
-// Ruta para verificar si puede ver el anuncio (Límite 5 cada 2 horas + 5 min entre videos)
+// Ruta para verificar si puede ver el anuncio (Límite 10 cada 1 hora)
 app.post('/api/tasks/start-ad', (req, res) => {
     const { userId } = req.body;
     if (!userId) return res.status(401).json({ ok: false, error: 'Usuario no válido' });
 
     const now = Math.floor(Date.now() / 1000);
-    const twoHoursAgo = now - 7200; // 2 horas para el límite total
-    const fiveMinutesAgo = now - 300; // 5 minutos para el bloqueo entre videos
+    const oneHourAgo = now - 3600; // 1 hora para el límite total
 
-    // 1. Verificamos cuántos videos vio en las últimas 2 horas
-    db.get(`SELECT COUNT(*) as total FROM ad_views WHERE user_id = ? AND created_at > ?`, [userId, twoHoursAgo], (err, rowTotal) => {
+    // Verificamos cuántos videos vio en la última hora
+    db.get(`SELECT COUNT(*) as total FROM ad_views WHERE user_id = ? AND created_at > ?`, [userId, oneHourAgo], (err, rowTotal) => {
         if (err) return res.status(500).json({ ok: false, error: 'Error DB' });
 
-        if (rowTotal.total >= 5) {
-            // Si ya vio 5, calculamos cuánto falta para que se cumplan las 2 horas desde el primero
-            db.get(`SELECT created_at FROM ad_views WHERE user_id = ? AND created_at > ? ORDER BY created_at ASC LIMIT 1`, [userId, twoHoursAgo], (err, firstView) => {
-                const timeLeft = (firstView.created_at + 7200) - now;
+        if (rowTotal.total >= 10) { // <--- CAMBIO: Límite de 10 videos
+            // Si ya vio 10, calculamos cuánto falta para que se cumpla la hora desde el primero
+            db.get(`SELECT created_at FROM ad_views WHERE user_id = ? AND created_at > ? ORDER BY created_at ASC LIMIT 1`, [userId, oneHourAgo], (err, firstView) => {
+                const timeLeft = (firstView.created_at + 3600) - now;
                 return res.json({ ok: false, error: `Límite alcanzado. Vuelve en ${Math.ceil(timeLeft/60)} minutos.` });
             });
         } else {
-            // 2. Si no ha llegado a 5, verificamos que hayan pasado 5 minutos desde el último
-            db.get(`SELECT COUNT(*) as recent FROM ad_views WHERE user_id = ? AND created_at > ?`, [userId, fiveMinutesAgo], (err, rowRecent) => {
-                if (rowRecent.recent > 0) {
-                    db.get(`SELECT created_at FROM ad_views WHERE user_id = ? AND created_at > ? ORDER BY created_at DESC LIMIT 1`, [userId, fiveMinutesAgo], (err, lastView) => {
-                        const timeLeft = (lastView.created_at + 300) - now;
-                        return res.json({ ok: false, error: `Espera ${Math.ceil(timeLeft/60)} minutos para el próximo video.` });
-                    });
-                } else {
-                    // ¡Todo listo! Puede ver el video
-                    res.json({ ok: true, user_id: userId });
-                }
-            });
+            // Todo listo, puede ver el video
+            res.json({ ok: true, user_id: userId });
         }
     });
 });
 
-// POSTBACK DE ADSGRAM (Aquí llega el pago real)
-app.get('/reward', (req, res) => {
-    const userId = req.query.userid; 
-    if (!userId) return res.status(400).send('Falta userid');
+// POSTBACK DE MONETAG (Aquí llega el pago real)
+app.get('/api/monetag/postback', (req, res) => {
+    const { user_id, zone, reward, txid } = req.query;
+    if (!user_id || !txid) return res.status(400).send('Faltan parámetros');
 
-    const reward = 0.75; // Pago por cofre
     const now = Math.floor(Date.now() / 1000);
+    const rewardAmount = 0.20; // <--- CAMBIO: 0.20 USDT por video
 
-    db.serialize(() => {
-        db.run(`BEGIN`);
-        db.run(`INSERT INTO ad_views (user_id, created_at) VALUES (?, ?)`, [userId, now]);
-        db.run(`UPDATE users SET balance = balance + ? WHERE id = ?`, [reward, userId]);
-        db.run(`COMMIT`, (err) => {
-            if (err) {
-                db.run(`ROLLBACK`);
-                return res.status(500).send('Error DB');
-            }
-            bot.telegram.sendMessage(userId, `💰 +${reward} USDT acreditados por ver un anuncio en PayNex.`).catch(()=>{});
-            res.status(200).send('ok');
+    // Evitar duplicados
+    db.get(`SELECT id FROM ad_views WHERE txid = ?`, [txid], (err, existing) => {
+        if (existing) return res.status(200).send('duplicate');
+
+        db.serialize(() => {
+            db.run(`BEGIN`);
+            db.run(`INSERT INTO ad_views (user_id, created_at, txid) VALUES (?, ?, ?)`, [user_id, now, txid]);
+            db.run(`UPDATE users SET balance = balance + ? WHERE id = ?`, [rewardAmount, user_id]);
+            db.run(`COMMIT`, (err) => {
+                if (err) {
+                    db.run(`ROLLBACK`);
+                    return res.status(500).send('Error DB');
+                }
+                bot.telegram.sendMessage(user_id, `💰 +${rewardAmount} USDT acreditados por ver un anuncio en PayNex.`).catch(()=>{});
+                res.status(200).send('ok');
+            });
         });
     });
 });
