@@ -122,7 +122,8 @@ function loadUserData() {
         document.getElementById('receive-amount').innerText = receiveAmount.toFixed(2) + ' USDT';
         document.getElementById('ref-link-text').innerText = getReferralLink();
         document.getElementById('total-refs').innerText = data.referidos || 0;
-        document.getElementById('total-earned').innerText = ((data.referidos || 0) * 1.5).toFixed(2) + ' USDT'; // Se puede cambiar a 3 si quieres que refleje la promo
+        // Actualizamos el Total Ganado a 3.00 por referido
+        document.getElementById('total-earned').innerText = ((data.referidos || 0) * 3.0).toFixed(2) + ' USDT'; 
     }).catch(err => console.log(err));
     
     fetch('/api/ranking').then(res => res.json()).then(data => {
@@ -367,9 +368,8 @@ async function watchAd() {
 // ==========================================
 // --- CONTADOR REGRESIVO DE LA PROMO ---
 // ==========================================
-// ⚠️ CAMBIA ESTA FECHA POR LA FECHA EXACTA EN QUE TERMINA TU PROMO
-// Formato: Año, Mes (0-11), Día, Hora, Minutos
-const promoEndDate = new Date(2026, 10, 8, 20, 0, 0); // Ejemplo: 8 de Noviembre de 2026 a las 20:00
+// ⚠️ FECHA DE FIN DE LA PROMO: 8 de Noviembre de 2026 a las 5:00 AM
+const promoEndDate = new Date(2026, 10, 8, 5, 0, 0); 
 
 function updatePromoTimer() {
     const now = new Date().getTime();
@@ -379,7 +379,7 @@ function updatePromoTimer() {
     const minsEl = document.getElementById("promo-minutes");
     const secsEl = document.getElementById("promo-seconds");
 
-    if (!hoursEl) return; // Si no existe el elemento, no hace nada
+    if (!hoursEl) return; 
 
     if (distance < 0) {
         hoursEl.innerText = "00";
