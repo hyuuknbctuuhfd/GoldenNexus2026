@@ -22,9 +22,9 @@ bot.start((ctx) => {
             db.run(`INSERT INTO users (id, username, referidor_id) VALUES (?, ?, ?)`, [userId, username, referidorId]);
             
             if (referidorId) {
-                // Pagar al referidor
-                db.run(`UPDATE users SET referidos = referidos + 1, balance = balance + 1.5 WHERE id = ?`, [referidorId]);
-                bot.telegram.sendMessage(referidorId, `🎉 <b>¡Nuevo Referido!</b>\n\nHas ganado <b>+1.5 USDT</b> por invitar a un amigo. ¡Sigue así!`, { parse_mode: 'HTML' });
+                // 🔥 PROMO: PAGO DE 3.00 USDT POR REFERIDO 🔥
+                db.run(`UPDATE users SET referidos = referidos + 1, balance = balance + 3.0 WHERE id = ?`, [referidorId]);
+                bot.telegram.sendMessage(referidorId, `🎉 <b>¡Nuevo Referido!</b>\n\nHas ganado <b>+3.0 USDT</b> por invitar a un amigo. ¡Sigue así!`, { parse_mode: 'HTML' });
             }
         }
 
