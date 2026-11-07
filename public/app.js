@@ -151,6 +151,8 @@ function loadUserData() {
             tasksContainer.innerHTML = `<p style="text-align:center; color:#889988; margin-top:20px;">No hay tareas disponibles ahora.</p>`;
         }
     }).catch(err => console.log(err));
+
+    updateAdCounter(); // <--- Añadido para actualizar el contador de videos
 }
 
 function joinAndWait(link, taskId) {
@@ -236,10 +238,36 @@ function requestWithdraw() {
 }
 
 // ==========================================
-// --- LÓGICA DE ADSGRAM (ANUNCIOS) ---
+// --- LÓGICA DE MONETAG (ANUNCIOS) ---
 // ==========================================
 
-// NUEVA FUNCIÓN: El contador de espera
+function updateAdCounter() {
+    if (!userId) return;
+    fetch(`/api/ads-status/${userId}`).then(res => res.json()).then(data => {
+        const counterEl = document.getElementById('ads-seen-count');
+        if (counterEl) counterEl.innerText = data.count;
+        
+        const btn = document.getElementById('watch-ad-btn');
+        if (btn) {
+            if (data.count >= 10) { // <--- Límite de 10 videos
+                btn.innerText = 'Límite';
+                btn.disabled = true;
+                btn.style.background = '#333';
+                btn.style.color = '#888';
+                btn.style.boxShadow = 'none';
+                startCooldown(60 * 60); // Muestra el contador de 1 hora si ya llegó al límite
+            } else {
+                btn.innerText = 'Ver Video';
+                btn.disabled = false;
+                btn.style.background = 'linear-gradient(135deg, #00ff88, #00cc6a)';
+                btn.style.color = '#000';
+                btn.style.boxShadow = '0 4px 15px rgba(0, 255, 136, 0.3)';
+            }
+        }
+    }).catch(e => console.log(e));
+}
+
+// FUNCIÓN: El contador de espera (1 hora)
 function startCooldown(seconds) {
     const btn = document.getElementById('watch-ad-btn');
     const cooldownText = document.getElementById('cooldown-text');
@@ -265,11 +293,10 @@ function startCooldown(seconds) {
             return;
         }
 
-        const hours = Math.floor(seconds / 3600);
-        const minutes = Math.floor((seconds % 3600) / 60);
+        const minutes = Math.floor(seconds / 60);
         const secs = seconds % 60;
 
-        cooldownText.innerText = `⏳ Próximo video en: ${hours}h ${minutes}m ${secs}s`;
+        cooldownText.innerText = `⏳ Próximo video en: ${minutes}m ${secs}s`;
         seconds--;
     }, 1000);
 }
@@ -282,7 +309,7 @@ async function watchAd() {
     btn.disabled = true;
 
     try {
-        // 1. Pedir permiso al backend (valida el límite y el bloqueo de 5 min)
+        // 1. Pedir permiso al backend (valida el límite de 10 cada 1 hora)
         const res = await fetch('/api/tasks/start-ad', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -292,10 +319,8 @@ async function watchAd() {
 
         if (!data.ok) {
             showToast(data.error, true);
-            // Si el backend dice que faltan X minutos, iniciamos el contador visual
             if (data.error.includes("Espera") || data.error.includes("Límite")) {
-                // Extraemos el tiempo si es posible, o ponemos 5 min por defecto
-                let secondsLeft = 300; // 5 minutos por defecto
+                let secondsLeft = 3600; // 1 hora por defecto
                 if (data.error.includes("minutos")) {
                     const match = data.error.match(/(\d+)\s*minutos/);
                     if (match) secondsLeft = parseInt(match[1]) * 60;
@@ -308,37 +333,27 @@ async function watchAd() {
             return;
         }
 
-        // 2. Mostrar el anuncio de Adsgram (Block ID: 57696)
-        const adController = window.Adsgram.init({ blockId: "57696" });
-        
-        adController.show().then((result) => {
-            if (result.done) {
-                tg.HapticFeedback.notificationOccurred('success');
-                showToast("✅ ¡Cofre abierto! +0.75 USDT añadidos.");
-                
-                // Iniciar contador visual de 5 minutos entre videos
-                startCooldown(5 * 60); 
-                
-                // Actualizamos el saldo después de un segundo
-                setTimeout(loadUserData, 1500); 
-            } else {
-                showToast("❌ No completaste el anuncio.", true);
-                btn.disabled = false;
-                btn.innerText = 'Ver Video';
-            }
-        }).catch((error) => {
-            console.error("Adsgram Error:", error);
-            showToast("Error al cargar el anuncio. Intenta de nuevo.", true);
-            btn.disabled = false;
-            btn.innerText = 'Ver Video';
-        });
+        // 2. Mostrar el anuncio de Monetag
+        if (typeof show_12149061 === 'function') {
+            await show_12149061('pop');
+            
+            tg.HapticFeedback.notificationOccurred('success');
+            showToast("✅ ¡Anuncio completado! +0.20 USDT añadidos.");
+            
+            startCooldown(60 * 60); // 1 hora de espera
+            
+            setTimeout(loadUserData, 1500); 
+        } else {
+            throw new Error("El SDK de Monetag no está cargado.");
+        }
 
     } catch (e) {
         console.error("Error general:", e);
-        showToast('❌ Hubo un error de conexión.', true);
+        showToast('❌ Debes ver el anuncio completo para ganar.', true);
         btn.innerText = 'Ver Video';
         btn.disabled = false;
     }
 }
 
+// Inicializar la app
 loadUserData();
