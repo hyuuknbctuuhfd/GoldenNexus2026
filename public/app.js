@@ -340,9 +340,12 @@ async function watchAd() {
             tg.HapticFeedback.notificationOccurred('success');
             showToast("✅ ¡Anuncio completado! +0.20 USDT añadidos.");
             
-            startCooldown(60 * 60); // 1 hora de espera
-            
-            setTimeout(loadUserData, 1500); 
+            // ACTUALIZAMOS EL CONTADOR (1/10, 2/10...)
+            setTimeout(() => {
+                updateAdCounter();
+                loadUserData();
+            }, 1000); 
+
         } else {
             throw new Error("El SDK de Monetag no está cargado.");
         }
