@@ -122,7 +122,7 @@ function loadUserData() {
         document.getElementById('receive-amount').innerText = receiveAmount.toFixed(2) + ' USDT';
         document.getElementById('ref-link-text').innerText = getReferralLink();
         document.getElementById('total-refs').innerText = data.referidos || 0;
-        document.getElementById('total-earned').innerText = ((data.referidos || 0) * 1.5).toFixed(2) + ' USDT';
+        document.getElementById('total-earned').innerText = ((data.referidos || 0) * 1.5).toFixed(2) + ' USDT'; // Se puede cambiar a 3 si quieres que refleje la promo
     }).catch(err => console.log(err));
     
     fetch('/api/ranking').then(res => res.json()).then(data => {
@@ -152,7 +152,7 @@ function loadUserData() {
         }
     }).catch(err => console.log(err));
 
-    updateAdCounter(); // <--- Añadido para actualizar el contador de videos
+    updateAdCounter(); 
 }
 
 function joinAndWait(link, taskId) {
@@ -249,13 +249,13 @@ function updateAdCounter() {
         
         const btn = document.getElementById('watch-ad-btn');
         if (btn) {
-            if (data.count >= 10) { // <--- Límite de 10 videos
+            if (data.count >= 10) { 
                 btn.innerText = 'Límite';
                 btn.disabled = true;
                 btn.style.background = '#333';
                 btn.style.color = '#888';
                 btn.style.boxShadow = 'none';
-                startCooldown(60 * 60); // Muestra el contador de 1 hora si ya llegó al límite
+                startCooldown(60 * 60); 
             } else {
                 btn.innerText = 'Ver Video';
                 btn.disabled = false;
@@ -267,7 +267,6 @@ function updateAdCounter() {
     }).catch(e => console.log(e));
 }
 
-// FUNCIÓN: El contador de espera (1 hora)
 function startCooldown(seconds) {
     const btn = document.getElementById('watch-ad-btn');
     const cooldownText = document.getElementById('cooldown-text');
@@ -309,7 +308,6 @@ async function watchAd() {
     btn.disabled = true;
 
     try {
-        // 1. Pedir permiso al backend (valida el límite de 10 cada 1 hora)
         const res = await fetch('/api/tasks/start-ad', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -320,7 +318,7 @@ async function watchAd() {
         if (!data.ok) {
             showToast(data.error, true);
             if (data.error.includes("Espera") || data.error.includes("Límite")) {
-                let secondsLeft = 3600; // 1 hora por defecto
+                let secondsLeft = 3600; 
                 if (data.error.includes("minutos")) {
                     const match = data.error.match(/(\d+)\s*minutos/);
                     if (match) secondsLeft = parseInt(match[1]) * 60;
@@ -333,11 +331,9 @@ async function watchAd() {
             return;
         }
 
-        // 2. Mostrar el anuncio de Monetag
         if (typeof show_12149061 === 'function') {
             await show_12149061('pop');
             
-            // AQUÍ AVISAMOS AL SERVIDOR QUE EL VIDEO SE COMPLETÓ
             const rewardRes = await fetch('/api/watch-ad', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -349,7 +345,6 @@ async function watchAd() {
                 tg.HapticFeedback.notificationOccurred('success');
                 showToast(`✅ ¡Anuncio completado! +0.20 USDT añadidos.`);
                 
-                // Actualizamos el contador y el saldo en pantalla
                 setTimeout(() => {
                     updateAdCounter();
                     loadUserData();
@@ -368,6 +363,43 @@ async function watchAd() {
         btn.disabled = false;
     }
 }
+
+// ==========================================
+// --- CONTADOR REGRESIVO DE LA PROMO ---
+// ==========================================
+// ⚠️ CAMBIA ESTA FECHA POR LA FECHA EXACTA EN QUE TERMINA TU PROMO
+// Formato: Año, Mes (0-11), Día, Hora, Minutos
+const promoEndDate = new Date(2026, 10, 8, 20, 0, 0); // Ejemplo: 8 de Noviembre de 2026 a las 20:00
+
+function updatePromoTimer() {
+    const now = new Date().getTime();
+    const distance = promoEndDate.getTime() - now;
+
+    const hoursEl = document.getElementById("promo-hours");
+    const minsEl = document.getElementById("promo-minutes");
+    const secsEl = document.getElementById("promo-seconds");
+
+    if (!hoursEl) return; // Si no existe el elemento, no hace nada
+
+    if (distance < 0) {
+        hoursEl.innerText = "00";
+        minsEl.innerText = "00";
+        secsEl.innerText = "00";
+        return;
+    }
+
+    const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+    const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+    const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+    hoursEl.innerText = hours.toString().padStart(2, '0');
+    minsEl.innerText = minutes.toString().padStart(2, '0');
+    secsEl.innerText = seconds.toString().padStart(2, '0');
+}
+
+// Actualizar el contador cada segundo
+setInterval(updatePromoTimer, 1000);
+updatePromoTimer();
 
 // Inicializar la app
 loadUserData();
